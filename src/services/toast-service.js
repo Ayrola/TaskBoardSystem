@@ -20,6 +20,7 @@ export const TOAST_MESSAGES = {
   projectCreated: 'Project created.',
   projectUpdated: 'Project saved.',
   projectDeleted: 'Project deleted.',
+  taskDeleted: 'Task deleted.',
   taskSaved: 'Task saved.',
   uploadCompleted: 'Upload completed.',
 };

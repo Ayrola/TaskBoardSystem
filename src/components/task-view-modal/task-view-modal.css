@@ -1,0 +1,17 @@
+.task-view-modal .task-description {
+  overflow-wrap: anywhere;
+}
+
+.task-view-modal .task-description > :last-child {
+  margin-bottom: 0;
+}
+
+.task-view-modal .task-description blockquote {
+  padding-left: 0.75rem;
+  border-left: 0.25rem solid var(--bs-border-color);
+  color: var(--bs-secondary-color);
+}
+
+.task-view-modal .task-description a {
+  overflow-wrap: anywhere;
+}

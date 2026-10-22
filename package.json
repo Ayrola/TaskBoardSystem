@@ -19,7 +19,10 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
     "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.2"
+    "bootstrap-icons": "^1.13.2",
+    "dompurify": "3.4.17",
+    "quill": "2.0.3",
+    "sortablejs": "1.15.7"
   },
   "devDependencies": {
     "vite": "^8.3.5"

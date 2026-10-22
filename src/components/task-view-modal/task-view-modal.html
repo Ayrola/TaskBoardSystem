@@ -1,0 +1,29 @@
+<div class="modal fade task-view-modal" tabindex="-1" aria-labelledby="task-view-title">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5 text-break" id="task-view-title" data-task-title></h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">
+          <span class="badge text-bg-secondary" data-stage-badge></span>
+          <span class="badge text-bg-success" data-done-badge hidden><i class="bi bi-check-circle" aria-hidden="true"></i> Done</span>
+        </p>
+        <div class="task-description" data-description></div>
+        <p class="text-body-secondary fst-italic mb-0" data-no-description hidden>No description.</p>
+        <dl class="small text-body-secondary mt-4 mb-0 task-meta">
+          <div><dt class="d-inline">Created:</dt> <dd class="d-inline" data-created></dd></div>
+          <div data-updated-row><dt class="d-inline">Updated:</dt> <dd class="d-inline" data-updated></dd></div>
+        </dl>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-outline-danger" data-action="delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" data-action="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

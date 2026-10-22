@@ -19,6 +19,42 @@ export function validateNewPassword(value) {
   return null;
 }
 
+export const PROJECT_TITLE_MAX = 200;
+export const PROJECT_DESCRIPTION_MAX = 2000;
+
+export function validateProjectTitle(value) {
+  const title = String(value ?? '').trim();
+  if (!title) return 'Enter a project title.';
+  if (title.length > PROJECT_TITLE_MAX) return `Title must be at most ${PROJECT_TITLE_MAX} characters.`;
+  return null;
+}
+
+export function validateProjectDescription(value) {
+  const length = String(value ?? '').trim().length;
+  return length > PROJECT_DESCRIPTION_MAX
+    ? `Description must be at most ${PROJECT_DESCRIPTION_MAX} characters.`
+    : null;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(value) {
+  return UUID_PATTERN.test(String(value ?? ''));
+}
+
+export const TASK_TITLE_MAX = 200;
+
+export function validateTaskTitle(value) {
+  const title = String(value ?? '').trim();
+  if (!title) return 'Enter a task title.';
+  if (title.length > TASK_TITLE_MAX) return `Title must be at most ${TASK_TITLE_MAX} characters.`;
+  return null;
+}
+
+export function validateTaskStage(value) {
+  return isUuid(value) ? null : 'Choose a stage.';
+}
+
 export function validatePasswordConfirmation(password, confirmation) {
   return password === confirmation ? null : 'Passwords do not match.';
 }

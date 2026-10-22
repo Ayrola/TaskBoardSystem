@@ -1,8 +1,48 @@
-<section class="page-project-form">
-  <h1 class="h2" data-heading></h1>
-  <p class="text-body-secondary">
-    Placeholder: the project form will appear here.
-    <span data-id-note hidden>Project id: <code data-project-id></code></span>
-  </p>
-  <a class="btn btn-outline-secondary" href="/projects">Back to projects</a>
+<section class="page-project-form" aria-labelledby="project-form-heading" aria-busy="false">
+  <h1 id="project-form-heading" class="h2 mb-3" data-heading></h1>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status" hidden>
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading project…</span>
+  </div>
+
+  <div data-state="notfound" class="card" hidden>
+    <div class="card-body text-center py-5">
+      <i class="bi bi-question-circle display-5 text-body-secondary" aria-hidden="true"></i>
+      <h2 class="h5 mt-3">Project not found</h2>
+      <p class="text-body-secondary mb-3">This project does not exist, or you do not have access to it.</p>
+      <a class="btn btn-primary" href="/projects">Back to projects</a>
+    </div>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-load-error>Could not load this project.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <form data-state="form" class="project-form card card-body" novalidate hidden>
+    <div class="alert alert-danger" role="alert" data-form-error hidden></div>
+
+    <div class="mb-3">
+      <label for="project-title" class="form-label">Title <span class="text-danger" aria-hidden="true">*</span></label>
+      <input id="project-title" name="title" type="text" class="form-control" required maxlength="200"
+        autocomplete="off" aria-describedby="project-title-error" />
+      <div id="project-title-error" class="invalid-feedback" data-error-for="title"></div>
+    </div>
+
+    <div class="mb-4">
+      <label for="project-description" class="form-label">Description <span class="text-body-secondary">(optional)</span></label>
+      <textarea id="project-description" name="description" class="form-control" rows="5"
+        aria-describedby="project-description-error"></textarea>
+      <div id="project-description-error" class="invalid-feedback" data-error-for="description"></div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <button type="submit" class="btn btn-primary" data-submit>
+        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" data-submit-spinner hidden></span>
+        <span data-submit-label>Save</span>
+      </button>
+      <a class="btn btn-outline-secondary" href="/projects" data-cancel>Cancel</a>
+    </div>
+  </form>
 </section>

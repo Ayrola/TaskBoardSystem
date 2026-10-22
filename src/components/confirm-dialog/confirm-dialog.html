@@ -1,0 +1,22 @@
+<div class="modal fade confirm-dialog" tabindex="-1" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-body">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="confirm-dialog-title" data-dialog-title></h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="confirm-dialog-body">
+        <p class="mb-2" data-dialog-lead></p>
+        <p class="mb-0" data-dialog-detail></p>
+        <div class="alert alert-danger mt-3 mb-0" role="alert" data-dialog-error hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-dialog-cancel>Cancel</button>
+        <button type="button" class="btn btn-danger" data-dialog-confirm>
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" data-dialog-spinner hidden></span>
+          <span data-dialog-confirm-label>Delete</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

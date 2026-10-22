@@ -18,6 +18,8 @@ let outlet = null;
 let current = null;
 let renderToken = 0;
 let renderedKey = null;
+// Set by a page with unsaved work; returns true to allow leaving.
+let leaveGuard = null;
 
 function normalize(pathname) {
   return pathname.length > 1 ? pathname.replace(/\/+$/, '') || '/' : pathname;
@@ -62,6 +64,7 @@ export function safeReturnTo(value) {
 }
 
 function unmountCurrent() {
+  leaveGuard = null;
   if (!current) return;
   current.controller.abort(); // cancels pending page requests that listen to ctx.signal
   current.cleanup.run();
@@ -140,6 +143,9 @@ async function render({ focus }) {
     signal: controller.signal,
     cleanup,
     navigate,
+    setLeaveGuard(guard) {
+      leaveGuard = guard;
+    },
   };
   current = { cleanup, controller };
 
@@ -167,6 +173,7 @@ export function navigate(to, { replace = false } = {}) {
   }
   const target = url.pathname + url.search + url.hash;
   if (target === location.pathname + location.search + location.hash) return;
+  if (leaveGuard && !leaveGuard()) return;
   history[replace ? 'replaceState' : 'pushState']({}, '', target);
   render({ focus: true });
 }
@@ -195,6 +202,11 @@ function onClick(event) {
 function onPopState() {
   // Hash-only history entries do not change the rendered page.
   if (location.pathname + location.search === renderedKey) return;
+  if (leaveGuard && !leaveGuard()) {
+    // The browser already moved; put the current page's URL back.
+    history.pushState({}, '', renderedKey);
+    return;
+  }
   render({ focus: true });
 }
 
@@ -207,6 +219,7 @@ export function startRouter(container) {
   // leave private pages on sign-out, otherwise remount so everything is rebuilt and re-checked.
   const stopAuthWatch = onAuthChange(({ session, userChanged }) => {
     if (!userChanged) return;
+    leaveGuard = null; // the previous user's unsaved work is discarded, no prompt
     const { route } = resolve(location.pathname);
     if (!session && route.access === 'private') navigate('/', { replace: true });
     else render({ focus: false });
