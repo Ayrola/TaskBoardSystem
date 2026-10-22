@@ -1,0 +1,56 @@
+<section class="admin-page page-admin-users" aria-labelledby="admin-users-heading" aria-busy="true">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 id="admin-users-heading" class="h2 mb-0"><i class="bi bi-people me-2" aria-hidden="true"></i>Admin · Users</h1>
+    <a class="btn btn-outline-secondary" href="/admin/projects">Projects</a>
+  </div>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading users…</span>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load users.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="empty" class="card" hidden>
+    <div class="card-body text-center py-5 text-body-secondary">There are no users.</div>
+  </div>
+
+  <div data-state="table" hidden>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle admin-table">
+        <caption class="visually-hidden">All users</caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Role</th>
+            <th scope="col">Created</th>
+            <th scope="col">Last sign-in</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+  </div>
+
+  <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2" aria-label="Users pagination" data-pager hidden></nav>
+
+  <template data-row-template>
+    <tr>
+      <th scope="row" class="fw-semibold" data-cell="name"></th>
+      <td data-cell="email"></td>
+      <td><span class="badge" data-cell="role"></span></td>
+      <td class="text-nowrap" data-cell="created"></td>
+      <td class="text-nowrap" data-cell="signin"></td>
+      <td class="text-nowrap">
+        <a class="btn btn-sm btn-outline-primary" data-action="view">View</a>
+        <a class="btn btn-sm btn-outline-secondary" data-action="edit">Edit</a>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button>
+      </td>
+    </tr>
+  </template>
+</section>

@@ -8,6 +8,14 @@
       <div class="modal-body" id="confirm-dialog-body">
         <p class="mb-2" data-dialog-lead></p>
         <p class="mb-0" data-dialog-detail></p>
+        <div class="mt-3" data-dialog-choice hidden>
+          <label class="form-label" for="confirm-dialog-select" data-dialog-choice-label></label>
+          <select class="form-select" id="confirm-dialog-select" data-dialog-select></select>
+        </div>
+        <div class="mt-3" data-dialog-typed hidden>
+          <label class="form-label" for="confirm-dialog-typed" data-dialog-typed-label></label>
+          <input class="form-control" id="confirm-dialog-typed" type="text" autocomplete="off" spellcheck="false" data-dialog-typed-input />
+        </div>
         <div class="alert alert-danger mt-3 mb-0" role="alert" data-dialog-error hidden></div>
       </div>
       <div class="modal-footer">

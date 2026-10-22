@@ -1,7 +1,8 @@
 import html from './projects.html?raw';
 import './projects.css';
 import { renderFragment, setText } from '../../utils/render.js';
-import { listProjects, deleteProject, ProjectNotFoundError } from '../../services/projects-service.js';
+import { listProjects, deleteProject, ProjectNotFoundError, PROJECTS_PAGE_SIZE } from '../../services/projects-service.js';
+import { pageFromQuery, renderPager, totalPages } from '../../utils/pager.js';
 import { openConfirmDialog } from '../../components/confirm-dialog/confirm-dialog.js';
 import { showSuccess, showInfo, TOAST_MESSAGES } from '../../services/toast-service.js';
 
@@ -13,6 +14,8 @@ export function mount(container, ctx) {
   const panels = root.querySelectorAll('[data-state]');
   const rows = root.querySelector('[data-rows]');
   const template = root.querySelector('[data-row-template]');
+  const pager = root.querySelector('[data-pager]');
+  let page = pageFromQuery(ctx.query);
   let requestId = 0;
   let dialog = null;
   let projectsById = new Map();
@@ -41,12 +44,13 @@ export function mount(container, ctx) {
     edit.href = `/projects/${id}/edit`;
     edit.setAttribute('aria-label', `Edit ${project.title}`);
     row.querySelector('[data-action="delete"]').setAttribute('aria-label', `Delete ${project.title}`);
-    const role = setText(row, '[data-cell="role"]', project.isOwner ? 'Owned' : 'Member');
-    role.classList.add(project.isOwner ? 'text-bg-primary' : 'text-bg-secondary');
+    const label = project.isOwner ? 'Owned' : project.canManage ? 'Admin access' : 'Member';
+    const role = setText(row, '[data-cell="role"]', label);
+    role.classList.add(project.isOwner ? 'text-bg-primary' : project.canManage ? 'text-bg-dark' : 'text-bg-secondary');
     const users = row.querySelector('[data-action="users"]');
     users.href = `/projects/${id}/users`;
     users.setAttribute('aria-label', `Manage users of ${project.title}`);
-    if (!project.isOwner) {
+    if (!project.canManage) {
       edit.hidden = true;
       users.hidden = true;
       row.querySelector('[data-action="delete"]').hidden = true;
@@ -59,14 +63,26 @@ export function mount(container, ctx) {
     const current = ++requestId;
     if (!quiet) show('loading');
     try {
-      const projects = await listProjects({ signal: ctx.signal });
+      const result = await listProjects({ page, signal: ctx.signal });
       if (current !== requestId || ctx.signal.aborted) return;
 
-      projectsById = new Map(projects.map((project) => [project.id, project]));
-      rows.replaceChildren(...projects.map(buildRow));
-      show(projects.length === 0 ? 'empty' : 'table');
+      // The page no longer exists (for example its last project was deleted): go to the real last page.
+      if (result.rows.length === 0 && page > 1) {
+        page = totalPages(result.total, PROJECTS_PAGE_SIZE);
+        const params = new URLSearchParams(location.search);
+        if (page === 1) params.delete('page');
+        else params.set('page', String(page));
+        ctx.navigate(`${location.pathname}${params.size ? `?${params}` : ''}`, { replace: true });
+        return;
+      }
+
+      projectsById = new Map(result.rows.map((project) => [project.id, project]));
+      rows.replaceChildren(...result.rows.map(buildRow));
+      renderPager(pager, { page, total: result.total, pageSize: PROJECTS_PAGE_SIZE });
+      show(result.rows.length === 0 ? 'empty' : 'table');
     } catch (error) {
       if (current !== requestId || ctx.signal.aborted) return;
+      pager.hidden = true;
       setText(root, '[data-error-text]', error.message);
       show('error');
     }

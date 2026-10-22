@@ -23,3 +23,8 @@
 .task-view-modal .attachment-icon {
   line-height: 1;
 }
+
+.task-view-modal .comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

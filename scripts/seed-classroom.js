@@ -123,7 +123,7 @@ function fail(message) {
   process.exit(1);
 }
 
-function readConfig() {
+export function readConfig() {
   if (existsSync('.env.seed')) process.loadEnvFile('.env.seed');
 
   const url = process.env.SEED_SUPABASE_URL?.trim();
@@ -171,7 +171,7 @@ function readConfig() {
   return { url, serviceKey, ref: expectedRef };
 }
 
-async function findUsersByEmail(admin) {
+export async function findUsersByEmail(admin) {
   const found = new Map();
   for (let page = 1; ; page++) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });

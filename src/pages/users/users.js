@@ -57,7 +57,7 @@ export function mount(container, ctx) {
     if (!quiet) show('loading');
     try {
       const loaded = await getProject(projectId, { signal: ctx.signal });
-      if (!loaded.isOwner) throw new ProjectNotFoundError();
+      if (!loaded.canManage) throw new ProjectNotFoundError();
       const members = await listMembers(projectId, { signal: ctx.signal });
       if (current !== loadId || ctx.signal.aborted) return;
 

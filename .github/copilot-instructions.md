@@ -17,6 +17,7 @@ A Trello-style application where users manage projects, stages and tasks.
 - Use Supabase RLS as the authorization boundary.
 - Save and synchronize SQL migrations.
 - Project membership: the owner manages members; members can view the project and work with its tasks (see README).
+- Application roles: `user` / `admin` in `user_roles`; admins manage all projects via `is_admin()` inside RLS helpers. Roles are never taken from client metadata and there is no self-promotion path; admins are bootstrapped manually with `scripts/bootstrap-admin.js`.
 
 ## Canonical routes
 - `/`
@@ -27,3 +28,5 @@ A Trello-style application where users manage projects, stages and tasks.
 - `/projects/:id/edit`
 - `/projects/:id/tasks`
 - `/projects/:id/users`
+
+- Admin pages live under /admin; guard routes but rely on database authorization. Stage delete/reorder go through RPCs only; no Auth user administration in browser code.

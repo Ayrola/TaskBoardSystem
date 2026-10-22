@@ -98,7 +98,7 @@ function showError(message) {
 async function render({ focus }) {
   const token = ++renderToken;
   const url = new URL(location.href);
-  const { route, params, notFound } = resolve(url.pathname);
+  let { route, params, notFound } = resolve(url.pathname);
   const query = Object.fromEntries(url.searchParams);
 
   unmountCurrent();
@@ -110,7 +110,7 @@ async function render({ focus }) {
   if (token !== renderToken) return;
 
   const session = getCurrentSession();
-  if (route.access === 'private' && !session) {
+  if ((route.access === 'private' || route.access === 'admin') && !session) {
     const returnTo = encodeURIComponent(url.pathname + url.search);
     navigate(`/login?returnTo=${returnTo}`, { replace: true });
     return;
@@ -118,6 +118,23 @@ async function render({ focus }) {
   if (route.access === 'guest' && session) {
     navigate(safeReturnTo(url.searchParams.get('returnTo')) ?? '/dashboard', { replace: true });
     return;
+  }
+
+  // Admin routes look like unknown pages to everyone else. This is a convenience: the database still
+  // authorizes every admin read and write.
+  if (route.access === 'admin') {
+    let admin = false;
+    try {
+      admin = await (await import('./services/admin-service.js')).isAdmin();
+    } catch (error) {
+      console.error(error);
+    }
+    if (token !== renderToken) return;
+    if (!admin) {
+      route = notFoundRoute;
+      params = {};
+      notFound = true;
+    }
   }
 
   let page;
@@ -221,7 +238,7 @@ export function startRouter(container) {
     if (!userChanged) return;
     leaveGuard = null; // the previous user's unsaved work is discarded, no prompt
     const { route } = resolve(location.pathname);
-    if (!session && route.access === 'private') navigate('/', { replace: true });
+    if (!session && (route.access === 'private' || route.access === 'admin')) navigate('/', { replace: true });
     else render({ focus: false });
   });
 

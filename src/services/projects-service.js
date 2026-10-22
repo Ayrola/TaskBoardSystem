@@ -29,14 +29,21 @@ export async function getProject(id, { signal } = {}) {
   );
   if (error) throw new Error('Could not load this project.');
   if (!data) throw new ProjectNotFoundError();
-      const { data: session } = await supabaseClient.auth.getSession();
-      return {
-        id: data.id,
-        title: data.title,
-        description: data.description ?? '',
-        // UI hint only; the database enforces owner-only edits and deletes.
-        isOwner: data.owner_id === session?.session?.user?.id,
-      };
+  const { data: session } = await supabaseClient.auth.getSession();
+  const isOwner = data.owner_id === session?.session?.user?.id;
+  let canManage = isOwner;
+  if (!isOwner) {
+    const { data: admin } = await supabaseClient.rpc('is_admin');
+    canManage = admin === true;
+  }
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description ?? '',
+    // UI hints only; the database enforces who can edit, delete and manage members.
+    isOwner,
+    canManage,
+  };
 }
 
 // Uses the atomic RPC: the owner comes from auth.uid() and the default stages are created with it.
@@ -73,22 +80,33 @@ export async function deleteProject(id) {
   await drainAttachmentCleanup();
 }
 
-// Accessible projects (defined by RLS) with exact stage and task counts computed in the database.
-export async function listProjects({ signal } = {}) {
-  let query = supabaseClient.rpc('list_projects_with_counts');
+export const PROJECTS_PAGE_SIZE = 20;
+
+// One page of accessible projects, ordered by (created_at desc, id) in the database, plus the exact total.
+// Task counts are computed in the database, so they include every row regardless of what is displayed.
+export async function listProjects({ page = 1, signal } = {}) {
+  const safePage = Math.max(1, Math.floor(page) || 1);
+  let query = supabaseClient.rpc('list_projects_page', {
+    p_limit: PROJECTS_PAGE_SIZE,
+    p_offset: (safePage - 1) * PROJECTS_PAGE_SIZE,
+  });
   if (signal) query = query.abortSignal(signal);
 
   const { data, error } = await query;
   if (error) throw new Error('Could not load your projects.');
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    description: row.description ?? '',
-    createdAt: row.created_at,
-    stageCount: Number(row.stage_count),
-    openTasks: Number(row.open_tasks),
-    doneTasks: Number(row.done_tasks),
-    isOwner: row.is_owner === true,
-  }));
+  return {
+    total: Number(data?.total ?? 0),
+    rows: (data?.rows ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description ?? '',
+      createdAt: row.created_at,
+      stageCount: Number(row.stage_count),
+      openTasks: Number(row.open_tasks),
+      doneTasks: Number(row.done_tasks),
+      isOwner: row.is_owner === true,
+      canManage: row.can_manage === true,
+    })),
+  };
 }

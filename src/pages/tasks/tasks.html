@@ -54,6 +54,15 @@
       </header>
       <ul class="board-cards list-unstyled mb-0" data-cards></ul>
       <p class="board-empty text-body-secondary small mb-0" data-stage-empty hidden>No tasks in this stage.</p>
+      <div class="board-more small text-body-secondary" data-more hidden>
+        <p class="mb-1" data-more-summary></p>
+        <div class="d-flex align-items-center gap-2">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true" data-more-spinner hidden></span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-load-more>Load more</button>
+        </div>
+        <p class="text-danger mb-0 mt-1" data-more-error hidden>Could not load more tasks. Try again.</p>
+      </div>
+      <p class="board-end small text-body-secondary text-center mb-0" data-more-end hidden>End of list</p>
       <button type="button" class="btn btn-outline-secondary board-add" data-add>
         <i class="bi bi-plus-lg" aria-hidden="true"></i>
       </button>

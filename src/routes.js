@@ -9,6 +9,21 @@ export const routes = [
   { path: '/projects/:id/edit', access: 'private', load: () => import('./pages/project-form/project-form.js') },
   { path: '/projects/:id/tasks', access: 'private', load: () => import('./pages/tasks/tasks.js') },
   { path: '/projects/:id/users', access: 'private', load: () => import('./pages/users/users.js') },
+
+  // Admin console: unavailable (shown as not found) to everyone but admins; RLS and RPC checks decide what is allowed.
+  { path: '/admin', access: 'admin', load: () => import('./pages/admin/admin-projects.js') },
+  { path: '/admin/projects', access: 'admin', load: () => import('./pages/admin/admin-projects.js') },
+  { path: '/admin/projects/:id', access: 'admin', load: () => import('./pages/admin/admin-project.js') },
+  { path: '/admin/projects/:id/edit', access: 'admin', load: () => import('./pages/admin/admin-project.js') },
+  { path: '/admin/projects/:id/stages', access: 'admin', load: () => import('./pages/admin/admin-stages.js') },
+  { path: '/admin/projects/:id/tasks', access: 'admin', load: () => import('./pages/admin/admin-tasks.js') },
+  { path: '/admin/users', access: 'admin', load: () => import('./pages/admin/admin-users.js') },
+  { path: '/admin/users/:id', access: 'admin', load: () => import('./pages/admin/admin-user.js') },
+  { path: '/admin/users/:id/edit', access: 'admin', load: () => import('./pages/admin/admin-user.js') },
+  { path: '/admin/stages/:id', access: 'admin', load: () => import('./pages/admin/admin-stage.js') },
+  { path: '/admin/stages/:id/edit', access: 'admin', load: () => import('./pages/admin/admin-stage.js') },
+  { path: '/admin/tasks/:id', access: 'admin', load: () => import('./pages/admin/admin-task.js') },
+  { path: '/admin/tasks/:id/edit', access: 'admin', load: () => import('./pages/admin/admin-task.js') },
 ];
 
 export const notFoundRoute = {

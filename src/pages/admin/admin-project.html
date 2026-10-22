@@ -1,0 +1,75 @@
+<section class="admin-page page-admin-project" aria-labelledby="admin-project-heading" aria-busy="true">
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb admin-breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/projects">Admin projects</a></li>
+      <li class="breadcrumb-item active" aria-current="page" data-crumb>Project</li>
+    </ol>
+  </nav>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading project…</span>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load this project.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="notfound" class="alert alert-warning" role="alert" hidden>
+    This project no longer exists. <a href="/admin/projects">Back to projects</a>
+  </div>
+
+  <div data-state="details" hidden>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+      <h1 id="admin-project-heading" class="h2 mb-0" data-title></h1>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" data-link="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <button type="button" class="btn btn-outline-danger" data-delete><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <dl class="row admin-definition mb-0">
+          <dt class="col-sm-3">Description</dt>
+          <dd class="col-sm-9" data-field="description"></dd>
+          <dt class="col-sm-3">Owner</dt>
+          <dd class="col-sm-9" data-field="owner"></dd>
+          <dt class="col-sm-3">Created</dt>
+          <dd class="col-sm-9" data-field="created"></dd>
+          <dt class="col-sm-3">Last updated</dt>
+          <dd class="col-sm-9" data-field="updated"></dd>
+          <dt class="col-sm-3">Stages</dt>
+          <dd class="col-sm-9"><span data-field="stages"></span> · <a data-link="stages">Manage stages</a></dd>
+          <dt class="col-sm-3">Tasks</dt>
+          <dd class="col-sm-9 mb-0"><span data-field="tasks"></span> · <a data-link="tasks">Manage tasks</a></dd>
+        </dl>
+      </div>
+    </div>
+    <a class="btn btn-link px-0" data-link="board">Open the board</a>
+  </div>
+
+  <div data-state="form" hidden>
+    <h1 id="admin-project-edit-heading" class="h2 mb-3">Edit project</h1>
+    <form novalidate class="card card-body" style="max-width: 42rem">
+      <div class="alert alert-danger" role="alert" data-form-error hidden></div>
+      <div class="mb-3">
+        <label class="form-label" for="admin-project-title">Title</label>
+        <input class="form-control" id="admin-project-title" name="title" type="text" maxlength="200" required aria-describedby="admin-project-title-error" />
+        <div class="invalid-feedback" id="admin-project-title-error" data-error-for="title"></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="admin-project-description">Description</label>
+        <textarea class="form-control" id="admin-project-description" name="description" rows="4" maxlength="2000" aria-describedby="admin-project-description-error"></textarea>
+        <div class="invalid-feedback" id="admin-project-description-error" data-error-for="description"></div>
+      </div>
+      <p class="text-body-secondary small">The owner cannot be changed here.</p>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" data-submit>
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" data-spinner hidden></span>Save changes
+        </button>
+        <a class="btn btn-outline-secondary" data-link="cancel">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>

@@ -1,0 +1,69 @@
+<section class="admin-page page-admin-stages" aria-labelledby="admin-stages-heading" aria-busy="true">
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb admin-breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/projects">Admin projects</a></li>
+      <li class="breadcrumb-item"><a data-crumb-project>Project</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Stages</li>
+    </ol>
+  </nav>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 id="admin-stages-heading" class="h2 mb-0">Stages</h1>
+    <a class="btn btn-outline-secondary" data-link="tasks">View tasks</a>
+  </div>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading stages…</span>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load stages.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="notfound" class="alert alert-warning" role="alert" hidden>
+    This project no longer exists. <a href="/admin/projects">Back to projects</a>
+  </div>
+
+  <div data-state="empty" class="card" hidden>
+    <div class="card-body text-center py-5 text-body-secondary">This project has no stages.</div>
+  </div>
+
+  <div data-state="table" hidden>
+    <p class="text-body-secondary small mb-2">Use the arrows to change the order; each task stays in its stage.</p>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle admin-table">
+        <caption class="visually-hidden">Stages of the project in board order</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="text-end">#</th>
+            <th scope="col">Name</th>
+            <th scope="col">Counts as done</th>
+            <th scope="col">Order</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+  </div>
+
+  <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2" aria-label="Stages pagination" data-pager hidden></nav>
+
+  <template data-row-template>
+    <tr>
+      <td class="text-end" data-cell="number"></td>
+      <th scope="row" class="fw-semibold" data-cell="name"></th>
+      <td><span class="badge" data-cell="done"></span></td>
+      <td class="text-nowrap">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="up"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="down"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+      </td>
+      <td class="text-nowrap">
+        <a class="btn btn-sm btn-outline-primary" data-action="view">View</a>
+        <a class="btn btn-sm btn-outline-secondary" data-action="edit">Edit</a>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button>
+      </td>
+    </tr>
+  </template>
+</section>

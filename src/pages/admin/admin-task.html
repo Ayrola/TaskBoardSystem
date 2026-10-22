@@ -1,0 +1,59 @@
+<section class="admin-page page-admin-task" aria-labelledby="admin-task-heading" aria-busy="true">
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb admin-breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/projects">Admin projects</a></li>
+      <li class="breadcrumb-item"><a data-crumb-project>Project</a></li>
+      <li class="breadcrumb-item"><a data-crumb-tasks>Tasks</a></li>
+      <li class="breadcrumb-item active" aria-current="page" data-crumb>Task</li>
+    </ol>
+  </nav>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading task…</span>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load this task.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="notfound" class="alert alert-warning" role="alert" hidden>
+    This task no longer exists. <a href="/admin/projects">Back to projects</a>
+  </div>
+
+  <div data-state="details" hidden>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+      <h1 id="admin-task-heading" class="h2 mb-0" data-title></h1>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" data-link="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <button type="button" class="btn btn-outline-danger" data-delete><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <dl class="row admin-definition mb-0">
+          <dt class="col-sm-3">Project</dt>
+          <dd class="col-sm-9"><a data-link="project"></a></dd>
+          <dt class="col-sm-3">Stage</dt>
+          <dd class="col-sm-9"><a data-link="stage"></a></dd>
+          <dt class="col-sm-3">Status</dt>
+          <dd class="col-sm-9"><span class="badge" data-field="status"></span></dd>
+          <dt class="col-sm-3">Position in stage</dt>
+          <dd class="col-sm-9" data-field="position"></dd>
+          <dt class="col-sm-3">Created</dt>
+          <dd class="col-sm-9" data-field="created"></dd>
+          <dt class="col-sm-3">Last updated</dt>
+          <dd class="col-sm-9" data-field="updated"></dd>
+          <dt class="col-sm-3">Description</dt>
+          <dd class="col-sm-9 mb-0 admin-rich-text" data-field="description"></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div data-state="editing" class="card card-body" hidden>
+    <h1 id="admin-task-edit-heading" class="h2 mb-2">Edit task</h1>
+    <p class="text-body-secondary mb-0">The task editor is open. Closing it returns you to the task.</p>
+  </div>
+</section>

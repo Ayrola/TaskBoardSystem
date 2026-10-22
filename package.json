@@ -8,7 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "seed": "node scripts/seed-classroom.js",
-    "seed:dry": "node scripts/seed-classroom.js --dry-run"
+    "seed:dry": "node scripts/seed-classroom.js --dry-run",
+    "seed:loadtest": "node scripts/seed-loadtest.js --confirm-dev",
+    "seed:loadtest:dry": "node scripts/seed-loadtest.js --dry-run",
+    "seed:loadtest:cleanup": "node scripts/seed-loadtest.js --cleanup --confirm-dev",
+    "bootstrap-admin": "node scripts/bootstrap-admin.js"
   },
   "keywords": [],
   "author": "",

@@ -128,6 +128,11 @@
   padding: 0.5rem 0.25rem;
 }
 
+.board-more,
+.board-end {
+  flex: 0 0 auto;
+}
+
 /* Large "+" target, always visible at the bottom of the column. */
 .board-add {
   flex: 0 0 auto;

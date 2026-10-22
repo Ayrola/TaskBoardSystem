@@ -34,6 +34,33 @@
           <p class="text-body-secondary small mb-0" data-attachment-empty hidden>No attachments yet.</p>
           <ul class="list-group attachment-list" data-attachment-list aria-label="Attachments" hidden></ul>
         </section>
+
+        <section class="comments mt-4" aria-labelledby="task-comments-heading">
+          <h3 class="h6 mb-2" id="task-comments-heading">
+            <i class="bi bi-chat-left-text" aria-hidden="true"></i> Discussion
+            <span class="badge text-bg-secondary rounded-pill ms-1" data-comment-count hidden></span>
+          </h3>
+          <form class="mb-3" data-comment-form novalidate>
+            <label class="visually-hidden" for="task-comment-input">Add a comment</label>
+            <textarea class="form-control" id="task-comment-input" rows="2" maxlength="2000" placeholder="Write a comment…" data-comment-input aria-describedby="task-comment-help" disabled></textarea>
+            <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
+              <span class="form-text mt-0" id="task-comment-help">Plain text, up to 2000 characters. <span data-comment-remaining></span></span>
+              <button type="submit" class="btn btn-sm btn-primary" data-comment-submit disabled>
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" data-comment-spinner hidden></span>Post comment
+              </button>
+            </div>
+          </form>
+          <div class="alert alert-danger py-2 small" role="alert" data-comment-error hidden></div>
+          <p class="text-body-secondary small" data-comment-loading role="status">Loading comments…</p>
+          <p class="text-body-secondary small mb-0" data-comment-empty hidden>No comments yet. Start the discussion above.</p>
+          <ul class="list-group comment-list" data-comment-list aria-label="Comments" hidden></ul>
+          <div class="d-flex align-items-center gap-2 mt-2" data-comment-more hidden>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-comment-load-more>Load older comments</button>
+            <span class="small text-body-secondary" data-comment-summary></span>
+          </div>
+          <p class="small text-body-secondary text-center mt-2 mb-0" data-comment-end hidden>No older comments.</p>
+        </section>
+
         <dl class="small text-body-secondary mt-4 mb-0 task-meta">
           <div><dt class="d-inline">Created:</dt> <dd class="d-inline" data-created></dd></div>
           <div data-updated-row><dt class="d-inline">Updated:</dt> <dd class="d-inline" data-updated></dd></div>
@@ -65,6 +92,34 @@
                   <span class="small">Remove this file permanently?</span>
                   <button type="button" class="btn btn-sm btn-danger" data-attachment-action="confirm-remove">Remove</button>
                   <button type="button" class="btn btn-sm btn-outline-secondary" data-attachment-action="cancel-remove">Keep</button>
+                </div>
+              </li>
+            </template>
+            <template data-comment-template>
+              <li class="list-group-item comment-item">
+                <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2">
+                  <div class="small">
+                    <strong data-comment-author></strong>
+                    <span class="text-body-secondary" data-comment-time></span>
+                    <span class="text-body-secondary fst-italic" data-comment-edited hidden>(edited)</span>
+                  </div>
+                  <div class="d-flex gap-1" data-comment-buttons>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-comment-action="edit" hidden><i class="bi bi-pencil" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-comment-action="delete" hidden><i class="bi bi-trash" aria-hidden="true"></i></button>
+                  </div>
+                </div>
+                <p class="comment-body mb-0 mt-1" data-comment-body></p>
+                <form class="mt-2" data-comment-edit-form hidden novalidate>
+                  <textarea class="form-control form-control-sm" rows="3" maxlength="2000" data-comment-edit-input></textarea>
+                  <div class="d-flex gap-2 mt-2">
+                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-comment-action="cancel-edit">Cancel</button>
+                  </div>
+                </form>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2" role="group" data-comment-confirm hidden>
+                  <span class="small" data-comment-confirm-text>Delete this comment permanently?</span>
+                  <button type="button" class="btn btn-sm btn-danger" data-comment-action="confirm-delete">Delete</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" data-comment-action="cancel-delete">Keep</button>
                 </div>
               </li>
             </template>

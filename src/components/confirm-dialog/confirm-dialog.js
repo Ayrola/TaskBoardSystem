@@ -5,8 +5,10 @@ import { renderFragment, setText } from '../../utils/render.js';
 
 // Opens a destructive-action confirmation. `onConfirm` is async; the dialog stays open and shows
 // an inline error if it throws. `result` resolves true after a successful confirm, false otherwise.
+// Optional `choice` ({ label, options: [{ value, label }] }) adds a required select whose value is passed to onConfirm.
 // Call `destroy()` when the owning page unmounts so no dialog or backdrop is left behind.
-export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete', onConfirm }) {
+// Optional `requireText` ({ label, value }) keeps the confirm button disabled until `value` is typed exactly.
+export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete', choice, requireText, onConfirm }) {
   const host = document.createElement('div');
   renderFragment(host, html);
   const element = host.firstElementChild;
@@ -19,6 +21,23 @@ export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete'
   setText(element, '[data-dialog-lead]', lead);
 
   const confirmButton = element.querySelector('[data-dialog-confirm]');
+  const select = element.querySelector('[data-dialog-select]');
+  if (choice) {
+    element.querySelector('[data-dialog-choice]').hidden = false;
+    setText(element, '[data-dialog-choice-label]', choice.label);
+    const placeholder = new Option('Choose a stage…', '', true, true);
+    placeholder.disabled = true;
+    select.append(placeholder, ...choice.options.map((option) => new Option(option.label, option.value)));
+  }
+  const typedInput = element.querySelector('[data-dialog-typed-input]');
+  if (requireText) {
+    element.querySelector('[data-dialog-typed]').hidden = false;
+    setText(element, '[data-dialog-typed-label]', requireText.label);
+    confirmButton.disabled = true;
+    typedInput.addEventListener('input', () => {
+      confirmButton.disabled = typedInput.value !== requireText.value;
+    });
+  }
   const cancelButtons = element.querySelectorAll('[data-bs-dismiss]');
   const spinner = element.querySelector('[data-dialog-spinner]');
   const errorBox = element.querySelector('[data-dialog-error]');
@@ -44,14 +63,22 @@ export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete'
     element.addEventListener('shown.bs.modal', () => element.querySelector('[data-dialog-cancel]')?.focus());
 
     confirmButton.addEventListener('click', async () => {
-      if (busy) return;
+      if (busy || (requireText && typedInput.value !== requireText.value)) return;
+      if (choice && !select.value) {
+        errorBox.textContent = 'Choose where to move the tasks first.';
+        errorBox.hidden = false;
+        select.focus();
+        return;
+      }
       busy = true;
       errorBox.hidden = true;
       confirmButton.disabled = true;
+      select.disabled = true;
+      typedInput.disabled = true;
       spinner.hidden = false;
       cancelButtons.forEach((button) => { button.disabled = true; });
       try {
-        await onConfirm();
+        await onConfirm(select.value || null);
         confirmed = true;
         busy = false;
         modal.hide();
@@ -60,6 +87,8 @@ export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete'
         errorBox.textContent = error?.message || 'Something went wrong. Please try again.';
         errorBox.hidden = false;
         confirmButton.disabled = false;
+        select.disabled = false;
+        typedInput.disabled = false;
         spinner.hidden = true;
         cancelButtons.forEach((button) => { button.disabled = false; });
       }

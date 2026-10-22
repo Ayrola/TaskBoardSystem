@@ -1,0 +1,65 @@
+<section class="admin-page page-admin-tasks" aria-labelledby="admin-tasks-heading" aria-busy="true">
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb admin-breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/projects">Admin projects</a></li>
+      <li class="breadcrumb-item"><a data-crumb-project>Project</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Tasks</li>
+    </ol>
+  </nav>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 id="admin-tasks-heading" class="h2 mb-0">Tasks</h1>
+    <a class="btn btn-outline-secondary" data-link="stages">View stages</a>
+  </div>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading tasks…</span>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load tasks.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="notfound" class="alert alert-warning" role="alert" hidden>
+    This project no longer exists. <a href="/admin/projects">Back to projects</a>
+  </div>
+
+  <div data-state="empty" class="card" hidden>
+    <div class="card-body text-center py-5 text-body-secondary">This project has no tasks.</div>
+  </div>
+
+  <div data-state="table" hidden>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle admin-table">
+        <caption class="visually-hidden">Tasks of the project, newest first</caption>
+        <thead>
+          <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Stage</th>
+            <th scope="col">Status</th>
+            <th scope="col">Updated</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+  </div>
+
+  <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2" aria-label="Tasks pagination" data-pager hidden></nav>
+
+  <template data-row-template>
+    <tr>
+      <th scope="row" class="fw-semibold" data-cell="title"></th>
+      <td data-cell="stage"></td>
+      <td><span class="badge" data-cell="status"></span></td>
+      <td class="text-nowrap" data-cell="updated"></td>
+      <td class="text-nowrap">
+        <a class="btn btn-sm btn-outline-primary" data-action="view">View</a>
+        <a class="btn btn-sm btn-outline-secondary" data-action="edit">Edit</a>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button>
+      </td>
+    </tr>
+  </template>
+</section>

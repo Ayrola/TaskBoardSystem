@@ -2,9 +2,9 @@ import Sortable from 'sortablejs';
 import html from './tasks.html?raw';
 import './tasks.css';
 import { renderFragment, setText, htmlToExcerpt } from '../../utils/render.js';
-import { getBoard } from '../../services/board-service.js';
+import { getBoard, fetchColumnTasks, BOARD_PAGE_SIZE } from '../../services/board-service.js';
 import { ProjectNotFoundError, getProject } from '../../services/projects-service.js';
-import { createTask, updateTask, deleteTask, moveTask, TaskNotFoundError } from '../../services/tasks-service.js';
+import { createTask, updateTask, deleteTask, moveTask, TaskNotFoundError, StalePlacementError } from '../../services/tasks-service.js';
 import { drainAttachmentCleanup } from '../../services/attachments-service.js';
 import { subscribeToBoard } from '../../services/board-realtime.js';
 import { onAuthChange } from '../../services/auth-service.js';
@@ -17,6 +17,7 @@ import { showSuccess, showInfo, showError, TOAST_MESSAGES } from '../../services
 export const title = 'Tasks';
 
 const REFRESH_DEBOUNCE_MS = 300;
+const LOAD_MORE_THRESHOLD_PX = 160;
 
 export function mount(container, ctx) {
   const { params } = ctx;
@@ -28,7 +29,11 @@ export function mount(container, ctx) {
   const cardTemplate = root.querySelector('[data-card-template]');
   const actions = root.querySelector('[data-actions]');
   let requestId = 0;
-  let data = null; // { project, stages } as last loaded
+  // Bumped whenever cursors may have become invalid (a reload starts, a move, a realtime change). A page
+  // request that finishes under an older epoch is discarded, so stale pages are never mixed into the board.
+  let boardEpoch = 0;
+  let activeLoads = 0;
+  let data = null; // { project, stages } as last loaded; each stage carries tasks, taskCount, hasMore, nextCursor
   let activeDialog = null; // the modal currently open, so unmount can release it
   let flowActive = false; // one add/view/edit/delete flow at a time
   let stale = false; // a save failed because the task or stage no longer exists
@@ -81,7 +86,10 @@ export function mount(container, ctx) {
             return;
           }
           const stageId = event.to.closest('.board-column')?.dataset.stageId;
-          performMove(event.item.dataset.taskId, stageId, event.newIndex);
+          // The anchor is the card now directly above the drop; null means the top of the column. A drop below
+          // the last LOADED card lands right after it, ahead of every unloaded task.
+          const above = event.item.previousElementSibling;
+          performMove(event.item.dataset.taskId, stageId, { afterTaskId: above?.dataset.taskId ?? null });
         },
       }),
     );
@@ -117,15 +125,16 @@ export function mount(container, ctx) {
     heading.id = `stage-${stage.id}`;
     column.setAttribute('aria-labelledby', heading.id);
 
-    const count = setText(column, '[data-stage-count]', stage.tasks.length);
-    count.setAttribute('aria-label', `${stage.tasks.length} ${stage.tasks.length === 1 ? 'task' : 'tasks'}`);
+    const count = setText(column, '[data-stage-count]', stage.taskCount.toLocaleString());
+    count.setAttribute('aria-label', `${stage.taskCount} ${stage.taskCount === 1 ? 'task' : 'tasks'}`);
     if (stage.isDone) {
       count.className = 'badge text-bg-success rounded-pill';
       column.classList.add('is-done');
     }
 
     column.querySelector('[data-cards]').append(...stage.tasks.map(buildCard));
-    column.querySelector('[data-stage-empty]').hidden = stage.tasks.length > 0;
+    column.querySelector('[data-stage-empty]').hidden = stage.taskCount > 0;
+    updateColumnFooter(column, stage);
 
     const add = column.querySelector('[data-add]');
     add.setAttribute('aria-label', `Add task to ${stage.name}`);
@@ -133,13 +142,72 @@ export function mount(container, ctx) {
     return column;
   }
 
+  // Loading, "load more" and end-of-list indicators of one column.
+  function updateColumnFooter(column, stage) {
+    const more = column.querySelector('[data-more]');
+    const end = column.querySelector('[data-more-end]');
+    more.hidden = !stage.hasMore;
+    end.hidden = stage.hasMore || stage.tasks.length <= BOARD_PAGE_SIZE;
+    if (!stage.hasMore) return;
+    setText(more, '[data-more-summary]', `Showing ${stage.tasks.length.toLocaleString()} of ${stage.taskCount.toLocaleString()} tasks`);
+    more.querySelector('[data-more-spinner]').hidden = !stage.loadingMore;
+    more.querySelector('[data-more-error]').hidden = !stage.loadError || stage.loadingMore;
+    const button = more.querySelector('[data-load-more]');
+    button.disabled = stage.loadingMore;
+    button.textContent = stage.loadingMore ? 'Loading…' : stage.loadError ? 'Try again' : 'Load more';
+  }
+
+  const columnFor = (stageId) => board.querySelector(`.board-column[data-stage-id="${CSS.escape(stageId)}"]`);
+
+  // Appends the next page of one column. The cursor is the last loaded (position, id); results are discarded if
+  // the board was invalidated or re-rendered meanwhile, and ids already present are never added twice.
+  async function loadMore(stageId) {
+    const stage = data?.stages.find((candidate) => candidate.id === stageId);
+    if (!stage || !stage.hasMore || stage.loadingMore || activeLoads > 0 || isBusy() || ctx.signal.aborted) return;
+
+    const epoch = boardEpoch;
+    stage.loadingMore = true;
+    stage.loadError = false;
+    updateColumnFooter(columnFor(stageId), stage);
+    let result = null;
+    try {
+      result = await fetchColumnTasks(stageId, { cursor: stage.nextCursor, signal: ctx.signal });
+    } catch {
+      if (ctx.signal.aborted) return;
+    }
+    stage.loadingMore = false;
+    if (ctx.signal.aborted) return;
+
+    const column = columnFor(stageId);
+    const stillCurrent = epoch === boardEpoch && data?.stages.includes(stage) && column;
+    if (!stillCurrent) return; // the reload that invalidated this page rebuilds the column itself
+    if (!result) {
+      stage.loadError = true;
+      updateColumnFooter(column, stage);
+      return;
+    }
+
+    const known = new Set(stage.tasks.map((task) => task.id));
+    const fresh = result.tasks.filter((task) => !known.has(task.id));
+    stage.tasks.push(...fresh);
+    stage.hasMore = result.hasMore;
+    stage.nextCursor = result.nextCursor;
+    if (!stage.hasMore) stage.taskCount = stage.tasks.length;
+    else stage.taskCount = Math.max(stage.taskCount, stage.tasks.length + 1);
+    column.querySelector('[data-cards]').append(...fresh.map(buildCard));
+    setText(column, '[data-stage-count]', stage.taskCount.toLocaleString());
+    updateColumnFooter(column, stage);
+    // Overlap means the column moved under us; settle on a fresh snapshot.
+    if (fresh.length !== result.tasks.length) scheduleRefresh();
+  }
+
   function render({ project, stages }) {
     const id = encodeURIComponent(project.id);
     setText(root, '[data-heading]', project.title);
     const description = setText(root, '[data-project-description]', project.description);
     description.hidden = !project.description;
-    root.querySelector('[data-link="edit"]').hidden = !project.isOwner;
-    root.querySelector('[data-link="users"]').hidden = !project.isOwner;
+    root.querySelector('[data-link="edit"]').hidden = !project.canManage;
+    root.querySelector('[data-link="users"]').hidden = !project.canManage;
     root.querySelector('[data-link="edit"]').href = `/projects/${id}/edit`;
     root.querySelector('[data-link="users"]').href = `/projects/${id}/users`;
     actions.hidden = false;
@@ -153,7 +221,7 @@ export function mount(container, ctx) {
       ]),
     );
 
-    const totalTasks = stages.reduce((sum, stage) => sum + stage.tasks.length, 0);
+    const totalTasks = stages.reduce((sum, stage) => sum + stage.taskCount, 0);
     root.querySelector('[data-no-stages]').hidden = stages.length > 0;
     root.querySelector('[data-empty-project]').hidden = totalTasks > 0 || stages.length === 0;
     board.hidden = stages.length === 0;
@@ -168,12 +236,19 @@ export function mount(container, ctx) {
   }
 
   // `quiet` refreshes in place (after a change) without replacing the board with the loading state.
-  async function load({ quiet = false } = {}) {
+  // A reload re-reads every column from the top down to the depth currently shown (plus `boost` rows for a column
+  // that just received a task), so every cursor is replaced by one taken from the same fresh snapshot.
+  async function load({ quiet = false, boost } = {}) {
     const current = ++requestId;
+    boardEpoch += 1;
     pendingRefresh = false; // this load already reads the newest state
     if (!quiet) show('loading');
+    const depths = data
+      ? new Map(data.stages.map((stage) => [stage.id, stage.tasks.length + (boost?.get(stage.id) ?? 0)]))
+      : undefined;
+    activeLoads += 1;
     try {
-      const loaded = await getBoard(params.id, { signal: ctx.signal });
+      const loaded = await getBoard(params.id, { signal: ctx.signal, depths });
       // Ignore answers that belong to an older request or to a previously opened project.
       if (current !== requestId || ctx.signal.aborted || loaded.project.id !== params.id) return;
       data = loaded;
@@ -189,6 +264,8 @@ export function mount(container, ctx) {
         setText(root, '[data-error-text]', error.message);
         show('error');
       }
+    } finally {
+      activeLoads -= 1;
     }
   }
 
@@ -342,42 +419,34 @@ export function mount(container, ctx) {
     );
   }
 
-  // Merges the server's answer for the two affected columns into the local board model.
-  function applyMoveResult(result) {
-    const known = new Map(data.stages.flatMap((stage) => stage.tasks).map((task) => [task.id, task]));
-    for (const stage of data.stages) {
-      if (stage.id !== result.stageId && stage.id !== result.sourceStageId) continue;
-      stage.tasks = result.tasks
-        .filter((task) => task.stageId === stage.id && known.has(task.id))
-        .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
-        .map((task) => ({ ...known.get(task.id), position: task.position, done: task.done }));
-    }
-  }
-
-  // Server is the source of truth: show its answer at once, then reload everything.
-  // On any failure the reload restores the real order that the drag had visually changed.
-  async function performMove(taskId, stageId, index, { restoreFocusTo } = {}) {
+  // The server is the only authority on positions. `placement` is { afterTaskId } (null = top of the column)
+  // or { toEnd: true }. Afterwards every cursor of the source and destination columns is stale, so the whole
+  // board is reloaded from the top to the depth currently shown (the destination gets one extra row for the
+  // task that arrived) instead of patching a loaded subset.
+  async function performMove(taskId, stageId, placement, { restoreFocusTo } = {}) {
     if (moving || flowActive || !data) {
       await load({ quiet: true });
       return;
     }
     moving = true;
+    boardEpoch += 1; // discards any load-more page still in flight
     setSaving(true);
     try {
+      let boost;
       try {
-        const result = await moveTask(taskId, stageId, index);
-        if (ctx.signal.aborted) return;
-        applyMoveResult(result);
-        render(data);
+        await moveTask({ taskId, stageId, ...placement });
+        boost = new Map([[stageId, 1]]);
       } catch (error) {
         if (ctx.signal.aborted) return;
         showError(
           error instanceof TaskNotFoundError
             ? 'That task or stage no longer exists. The board was refreshed.'
-            : 'Could not move the task. The board was restored.',
+            : error instanceof StalePlacementError
+              ? 'That column changed while you were moving the task. The board was refreshed.'
+              : 'Could not move the task. The board was restored.',
         );
       }
-      await load({ quiet: true });
+      await load({ quiet: true, boost });
     } finally {
       moving = false;
       if (!ctx.signal.aborted) setSaving(false);
@@ -398,7 +467,15 @@ export function mount(container, ctx) {
       flowActive = false;
     }
     if (ctx.signal.aborted) return;
-    if (choice) await performMove(taskId, choice.stageId, choice.index, { restoreFocusTo: true });
+    if (choice) {
+      let placement = { toEnd: true };
+      if (!choice.toEnd) {
+        const stage = data.stages.find((candidate) => candidate.id === choice.stageId);
+        const others = (stage?.tasks ?? []).filter((task) => task.id !== taskId);
+        placement = { afterTaskId: choice.index > 0 ? others[choice.index - 1]?.id ?? null : null };
+      }
+      await performMove(taskId, choice.stageId, placement, { restoreFocusTo: true });
+    }
     else {
       flushPending();
       restoreFocus({ taskId });
@@ -415,7 +492,20 @@ export function mount(container, ctx) {
     return false;
   }
 
+  // Scrolling near the bottom of a column loads its next page; scroll events do not bubble, so capture them.
+  ctx.cleanup.listen(board, 'scroll', (event) => {
+    const list = event.target;
+    if (!(list instanceof HTMLElement) || !list.matches('[data-cards]')) return;
+    if (list.scrollTop + list.clientHeight < list.scrollHeight - LOAD_MORE_THRESHOLD_PX) return;
+    loadMore(list.closest('.board-column').dataset.stageId);
+  }, true);
+
   ctx.cleanup.listen(board, 'click', (event) => {
+    const more = event.target.closest('[data-load-more]');
+    if (more) {
+      loadMore(more.closest('.board-column').dataset.stageId);
+      return;
+    }
     const add = event.target.closest('[data-add]');
     if (add) {
       const stageId = add.closest('.board-column').dataset.stageId;
@@ -453,10 +543,12 @@ export function mount(container, ctx) {
   realtime = subscribeToBoard(params.id, {
     onNotify: (kind) => {
       if (ctx.signal.aborted) return;
+      boardEpoch += 1; // invalidate in-flight pages immediately, even if the reload itself is deferred
       if (kind === 'access') checkAccess();
       scheduleRefresh();
     },
     onSubscribed: () => {
+      boardEpoch += 1;
       setLive(true);
       scheduleRefresh();
     },

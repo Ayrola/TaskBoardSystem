@@ -115,7 +115,7 @@ export function mount(container, ctx) {
     try {
       const project = await getProject(params.id, { signal: ctx.signal });
       if (current !== loadId || ctx.signal.aborted) return;
-      if (!project.isOwner) throw new ProjectNotFoundError();
+      if (!project.canManage) throw new ProjectNotFoundError();
       initial = { title: project.title, description: project.description };
       titleInput.value = initial.title;
       descriptionInput.value = initial.description;

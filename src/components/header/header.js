@@ -37,6 +37,22 @@ export function mountHeader(container) {
     }
   }
 
+  // The link is only a convenience; admin pages and data are authorized by the router guard and the database.
+  let adminCheck = 0;
+  async function updateAdmin(session) {
+    const item = container.querySelector('[data-admin-only]');
+    const current = ++adminCheck;
+    item.hidden = true;
+    if (!session) return;
+    try {
+      const { isAdmin } = await import('../../services/admin-service.js');
+      const admin = await isAdmin();
+      if (!disposed && current === adminCheck) item.hidden = !admin;
+    } catch {
+      // Stays hidden.
+    }
+  }
+
   async function onLogout() {
     logout.disabled = true;
     const { error } = await signOut();
@@ -52,11 +68,16 @@ export function mountHeader(container) {
   updateActive(location.pathname);
   updateAuth(null);
   getSession().then((session) => {
-    if (!disposed) updateAuth(session);
+    if (disposed) return;
+    updateAuth(session);
+    updateAdmin(session);
   });
 
   cleanup.add(onRouteChange(({ path }) => updateActive(path)));
-  cleanup.add(onSessionChange(updateAuth));
+  cleanup.add(onSessionChange((session) => {
+    updateAuth(session);
+    updateAdmin(session);
+  }));
   cleanup.listen(logout, 'click', onLogout);
   cleanup.add(() => Collapse.getInstance(menu)?.dispose());
   cleanup.add(() => {

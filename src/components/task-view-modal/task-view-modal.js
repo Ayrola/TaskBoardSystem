@@ -12,6 +12,15 @@ import {
   getAttachmentDownloadUrl,
 } from '../../services/attachments-service.js';
 import { showSuccess, TOAST_MESSAGES } from '../../services/toast-service.js';
+import {
+  COMMENTS_PAGE_SIZE,
+  COMMENT_MAX_LENGTH,
+  listComments,
+  addComment,
+  updateComment,
+  deleteComment,
+  validateCommentBody,
+} from '../../services/comments-service.js';
 
 const FILE_ICONS = {
   Image: 'bi-file-earmark-image',
@@ -52,9 +61,243 @@ export function openTaskViewModal({ task, stage, projectId }) {
   element.addEventListener('shown.bs.modal', () => editButton.focus(), { signal });
 
   setupAttachments();
+  setupComments();
 
   modal.show();
   return { result: modal.result, destroy: modal.destroy };
+
+  // Discussion: plain text only. Bodies are written with textContent (never innerHTML) and wrapped with CSS
+  // pre-wrap, so markup typed by a user is shown literally. Pages are keyset-paged newest first; a generation
+  // counter drops answers that arrive after a reload so pages are never mixed.
+  function setupComments() {
+    const form = element.querySelector('[data-comment-form]');
+    const input = element.querySelector('[data-comment-input]');
+    const submit = element.querySelector('[data-comment-submit]');
+    const spinner = element.querySelector('[data-comment-spinner]');
+    const remaining = element.querySelector('[data-comment-remaining]');
+    const errorBox = element.querySelector('[data-comment-error]');
+    const loadingText = element.querySelector('[data-comment-loading]');
+    const emptyText = element.querySelector('[data-comment-empty]');
+    const list = element.querySelector('[data-comment-list]');
+    const more = element.querySelector('[data-comment-more]');
+    const loadMoreButton = element.querySelector('[data-comment-load-more]');
+    const end = element.querySelector('[data-comment-end]');
+    const countBadge = element.querySelector('[data-comment-count]');
+    const template = element.querySelector('[data-comment-template]');
+
+    let comments = [];
+    let total = 0;
+    let hasMore = false;
+    let cursor = null;
+    let generation = 0;
+    let loadingPage = false;
+    let posting = false;
+
+    const showError = (message) => {
+      errorBox.textContent = message ?? '';
+      errorBox.hidden = !message;
+    };
+
+    function updateRemaining() {
+      const left = COMMENT_MAX_LENGTH - input.value.length;
+      remaining.textContent = left <= 200 ? `${left} left.` : '';
+    }
+
+    function render() {
+      const items = comments.map(buildItem);
+      list.replaceChildren(...items);
+      list.hidden = comments.length === 0;
+      emptyText.hidden = loadingText.hidden === false || comments.length > 0;
+      countBadge.hidden = total === 0;
+      countBadge.textContent = String(total);
+      countBadge.setAttribute('aria-label', `${total} ${total === 1 ? 'comment' : 'comments'}`);
+      more.hidden = !hasMore;
+      end.hidden = hasMore || comments.length <= COMMENTS_PAGE_SIZE;
+      setText(element, '[data-comment-summary]', `Showing ${comments.length} of ${total}`);
+      loadMoreButton.disabled = loadingPage;
+      loadMoreButton.textContent = loadingPage ? 'Loading…' : 'Load older comments';
+    }
+
+    function buildItem(comment) {
+      const item = template.content.firstElementChild.cloneNode(true);
+      item.dataset.commentId = comment.id;
+      setText(item, '[data-comment-author]', comment.authorLabel);
+      setText(item, '[data-comment-time]', formatDateTime(comment.createdAt));
+      setText(item, '[data-comment-body]', comment.body);
+      item.querySelector('[data-comment-edited]').hidden = comment.updatedAt === comment.createdAt;
+      const edit = item.querySelector('[data-comment-action="edit"]');
+      const del = item.querySelector('[data-comment-action="delete"]');
+      edit.hidden = !comment.canEdit;
+      del.hidden = !comment.canDelete;
+      edit.setAttribute('aria-label', `Edit comment by ${comment.authorLabel}`);
+      edit.title = 'Edit comment';
+      del.setAttribute('aria-label', `Delete comment by ${comment.authorLabel}`);
+      del.title = 'Delete comment';
+      if (!comment.isMine && comment.canDelete) {
+        setText(item, '[data-comment-confirm-text]', `Remove this comment by ${comment.authorLabel} as a moderator?`);
+      }
+      return item;
+    }
+
+    // Reloads from the newest page, down to the depth already shown, so a refresh after a change keeps the
+    // user's place without stitching old and new pages together.
+    async function reload({ keepDepth = false } = {}) {
+      const mine = ++generation;
+      const wanted = keepDepth ? Math.max(comments.length, COMMENTS_PAGE_SIZE) : COMMENTS_PAGE_SIZE;
+      try {
+        const fresh = [];
+        let page = await listComments(task.id, { signal });
+        fresh.push(...page.comments);
+        while (fresh.length < wanted && page.hasMore) {
+          if (signal.aborted || mine !== generation) return;
+          page = await listComments(task.id, { cursor: page.nextCursor, signal });
+          fresh.push(...page.comments);
+        }
+        if (signal.aborted || mine !== generation) return;
+        comments = fresh;
+        total = page.total;
+        hasMore = page.hasMore;
+        cursor = page.nextCursor;
+        showError(null);
+        loadingText.hidden = true;
+        input.disabled = false;
+        submit.disabled = posting;
+        render();
+      } catch (error) {
+        if (signal.aborted || mine !== generation) return;
+        loadingText.hidden = true;
+        showError(error.message);
+      }
+    }
+
+    async function loadOlder() {
+      if (loadingPage || !hasMore) return;
+      const mine = generation;
+      loadingPage = true;
+      render();
+      try {
+        const page = await listComments(task.id, { cursor, signal });
+        if (signal.aborted || mine !== generation) return;
+        const known = new Set(comments.map((comment) => comment.id));
+        comments = [...comments, ...page.comments.filter((comment) => !known.has(comment.id))];
+        total = page.total;
+        hasMore = page.hasMore;
+        cursor = page.nextCursor;
+      } catch (error) {
+        if (!signal.aborted && mine === generation) showError(error.message);
+      } finally {
+        loadingPage = false;
+        if (!signal.aborted) render();
+      }
+    }
+
+    const itemFor = (target) => target.closest('[data-comment-id]');
+    const commentFor = (item) => comments.find((candidate) => candidate.id === item?.dataset.commentId);
+
+    function setMode(item, mode) {
+      item.querySelector('[data-comment-edit-form]').hidden = mode !== 'edit';
+      item.querySelector('[data-comment-confirm]').hidden = mode !== 'delete';
+      item.querySelector('[data-comment-body]').hidden = mode === 'edit';
+      item.querySelector('[data-comment-buttons]').hidden = mode !== null;
+      if (mode === 'edit') {
+        const field = item.querySelector('[data-comment-edit-input]');
+        field.value = commentFor(item).body;
+        field.focus();
+      } else if (mode === 'delete') {
+        item.querySelector('[data-comment-action="cancel-delete"]').focus();
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (posting) return;
+      const problem = validateCommentBody(input.value);
+      if (problem) {
+        showError(problem);
+        return;
+      }
+      showError(null);
+      posting = true;
+      submit.disabled = true;
+      spinner.hidden = false;
+      try {
+        await addComment(task.id, input.value);
+        if (signal.aborted) return;
+        input.value = '';
+        updateRemaining();
+        await reload();
+      } catch (error) {
+        if (!signal.aborted) showError(error.message);
+      } finally {
+        posting = false;
+        if (!signal.aborted) {
+          spinner.hidden = true;
+          submit.disabled = false;
+          input.focus();
+        }
+      }
+    }, { signal });
+    input.addEventListener('input', updateRemaining, { signal });
+    loadMoreButton.addEventListener('click', loadOlder, { signal });
+
+    list.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const item = itemFor(event.target);
+      const comment = commentFor(item);
+      if (!comment) return;
+      const field = item.querySelector('[data-comment-edit-input]');
+      const problem = validateCommentBody(field.value);
+      if (problem) {
+        showError(problem);
+        return;
+      }
+      showError(null);
+      try {
+        await updateComment(comment.id, field.value);
+        if (signal.aborted) return;
+        await reload({ keepDepth: true });
+      } catch (error) {
+        if (signal.aborted) return;
+        showError(error.message);
+        await reload({ keepDepth: true });
+      }
+    }, { signal });
+
+    list.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-comment-action]');
+      if (!button) return;
+      const item = itemFor(button);
+      const comment = commentFor(item);
+      if (!comment) return;
+
+      switch (button.dataset.commentAction) {
+        case 'edit': setMode(item, 'edit'); break;
+        case 'delete': setMode(item, 'delete'); break;
+        case 'cancel-edit':
+        case 'cancel-delete':
+          setMode(item, null);
+          item.querySelector(`[data-comment-action="${button.dataset.commentAction === 'cancel-edit' ? 'edit' : 'delete'}"]`)?.focus();
+          break;
+        case 'confirm-delete':
+          showError(null);
+          button.disabled = true;
+          try {
+            await deleteComment(comment.id);
+          } catch (error) {
+            if (!signal.aborted) showError(error.message);
+          }
+          if (!signal.aborted) {
+            await reload({ keepDepth: true });
+            input.focus();
+          }
+          break;
+        default: break;
+      }
+    }, { signal });
+
+    updateRemaining();
+    reload();
+  }
 
   function setupAttachments() {
     const input = element.querySelector('[data-attachment-input]');

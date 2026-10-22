@@ -1,0 +1,71 @@
+<section class="admin-page page-admin-stage" aria-labelledby="admin-stage-heading" aria-busy="true">
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb admin-breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/projects">Admin projects</a></li>
+      <li class="breadcrumb-item"><a data-crumb-project>Project</a></li>
+      <li class="breadcrumb-item"><a data-crumb-stages>Stages</a></li>
+      <li class="breadcrumb-item active" aria-current="page" data-crumb>Stage</li>
+    </ol>
+  </nav>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading stage…</span>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load this stage.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="notfound" class="alert alert-warning" role="alert" hidden>
+    This stage no longer exists. <a href="/admin/projects">Back to projects</a>
+  </div>
+
+  <div data-state="details" hidden>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+      <h1 id="admin-stage-heading" class="h2 mb-0" data-title></h1>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" data-link="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <button type="button" class="btn btn-outline-danger" data-delete><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <dl class="row admin-definition mb-0">
+          <dt class="col-sm-3">Project</dt>
+          <dd class="col-sm-9"><a data-link="project"></a></dd>
+          <dt class="col-sm-3">Board position</dt>
+          <dd class="col-sm-9" data-field="position"></dd>
+          <dt class="col-sm-3">Counts as done</dt>
+          <dd class="col-sm-9" data-field="done"></dd>
+          <dt class="col-sm-3">Tasks</dt>
+          <dd class="col-sm-9 mb-0" data-field="tasks"></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div data-state="form" hidden>
+    <h1 id="admin-stage-edit-heading" class="h2 mb-3">Edit stage</h1>
+    <form novalidate class="card card-body" style="max-width: 36rem">
+      <div class="alert alert-danger" role="alert" data-form-error hidden></div>
+      <div class="mb-3">
+        <label class="form-label" for="admin-stage-name">Name</label>
+        <input class="form-control" id="admin-stage-name" name="name" type="text" maxlength="100" required aria-describedby="admin-stage-name-error" />
+        <div class="invalid-feedback" id="admin-stage-name-error" data-error-for="name"></div>
+      </div>
+      <div class="form-check mb-1">
+        <input class="form-check-input" id="admin-stage-done" name="isDone" type="checkbox" aria-describedby="admin-stage-done-help" />
+        <label class="form-check-label" for="admin-stage-done">Tasks in this stage are done</label>
+      </div>
+      <p class="form-text mb-3" id="admin-stage-done-help">Changing this updates the done status of every task in the stage.</p>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" data-submit>
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" data-spinner hidden></span>Save changes
+        </button>
+        <a class="btn btn-outline-secondary" data-link="cancel">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>

@@ -1,0 +1,30 @@
+.admin-page .admin-breadcrumb {
+  --bs-breadcrumb-divider: '›';
+}
+
+.admin-page .admin-description {
+  max-width: 36rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .admin-table th[scope='row'] {
+  max-width: 22rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-page .admin-rich-text {
+  overflow-wrap: anywhere;
+}
+
+.admin-page .admin-rich-text > :last-child {
+  margin-bottom: 0;
+}
+
+.admin-page .admin-definition dt {
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+}
+
+.admin-page .admin-definition dd {
+  overflow-wrap: anywhere;
+}

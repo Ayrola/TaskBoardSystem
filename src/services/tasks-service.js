@@ -60,19 +60,36 @@ export async function deleteTask(taskId) {
   await drainAttachmentCleanup();
 }
 
-// Moves one task to `index` in the destination stage. Only IDs of the dragged task and the stage are sent;
-// the server computes every position. Resolves to the affected columns so the board can refresh reliably:
-// { taskId, stageId, sourceStageId, position, done, changed, tasks: [{ id, stageId, position, done }] }
-export async function moveTask(taskId, stageId, index) {
-  if (!isUuid(taskId) || !isUuid(stageId)) throw new TaskNotFoundError();
-  if (!Number.isInteger(index) || index < 0) throw new Error('Invalid position.');
+// Raised when the destination column changed so the requested placement no longer exists (nothing was moved).
+export class StalePlacementError extends Error {
+  constructor() {
+    super('The column changed. Reload and try again.');
+    this.name = 'StalePlacementError';
+  }
+}
 
-  const { data, error } = await supabaseClient.rpc('move_task', {
+// Authoritative move. The browser never sends a position computed from the rows it happens to have loaded:
+// it names a placement relative to the real column and the server renumbers the WHOLE source and destination
+// columns under the project lock.
+//   afterTaskId = null, toEnd = false -> top of the column
+//   afterTaskId = <id>                -> directly after that task (it may be the last LOADED task of a longer column;
+//                                        the dropped task then sits before every still-unloaded task)
+//   toEnd = true                      -> after the last task of the whole column, loaded or not
+// Resolves { taskId, stageId, sourceStageId, position, done, changed, sourceCount, destCount }. Positions of other
+// tasks are not returned: every affected cursor is stale afterwards, so the caller refetches the columns.
+export async function moveTask({ taskId, stageId, afterTaskId = null, toEnd = false }) {
+  if (!isUuid(taskId) || !isUuid(stageId) || (afterTaskId !== null && !isUuid(afterTaskId))) {
+    throw new TaskNotFoundError();
+  }
+
+  const { data, error } = await supabaseClient.rpc('move_task_relative', {
     p_task_id: taskId,
     p_stage_id: stageId,
-    p_index: index,
+    p_after_task_id: toEnd ? null : afterTaskId,
+    p_to_end: Boolean(toEnd),
   });
   if (error?.code === NOT_FOUND_CODE) throw new TaskNotFoundError();
+  if (error?.code === '40001') throw new StalePlacementError();
   if (error || !data) throw new Error('Could not move the task. Please try again.');
 
   return {
@@ -82,11 +99,7 @@ export async function moveTask(taskId, stageId, index) {
     position: data.position,
     done: data.done,
     changed: data.changed,
-    tasks: data.tasks.map((task) => ({
-      id: task.id,
-      stageId: task.stage_id,
-      position: task.position,
-      done: task.done,
-    })),
+    sourceCount: Number(data.source_count),
+    destCount: Number(data.dest_count),
   };
 }
