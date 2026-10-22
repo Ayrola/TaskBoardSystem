@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase-client.js';
 import { isUuid } from '../utils/validation.js';
+import { drainAttachmentCleanup } from './attachments-service.js';
 
 // Thrown when a project does not exist or is not accessible. Both cases look identical on purpose,
 // so the UI never reveals whether someone else's project id exists.
@@ -23,12 +24,19 @@ export async function getProject(id, { signal } = {}) {
   if (!isUuid(id)) throw new ProjectNotFoundError();
 
   const { data, error } = await withSignal(
-    supabaseClient.from('projects').select('id, title, description').eq('id', id).maybeSingle(),
+    supabaseClient.from('projects').    select('id, title, description, owner_id').eq('id', id).maybeSingle(),
     signal,
   );
   if (error) throw new Error('Could not load this project.');
   if (!data) throw new ProjectNotFoundError();
-  return { id: data.id, title: data.title, description: data.description ?? '' };
+      const { data: session } = await supabaseClient.auth.getSession();
+      return {
+        id: data.id,
+        title: data.title,
+        description: data.description ?? '',
+        // UI hint only; the database enforces owner-only edits and deletes.
+        isOwner: data.owner_id === session?.session?.user?.id,
+      };
 }
 
 // Uses the atomic RPC: the owner comes from auth.uid() and the default stages are created with it.
@@ -54,13 +62,15 @@ export async function updateProject(id, { title, description }) {
   if (!data?.length) throw new ProjectNotFoundError();
 }
 
-// Stages and tasks are removed by the database (ON DELETE CASCADE).
+// Stages, tasks and attachment rows are removed by the database (ON DELETE CASCADE). Storage objects are not,
+// so their files are removed afterwards through the Storage API (best effort, retried on later cleanups).
 export async function deleteProject(id) {
   if (!isUuid(id)) throw new ProjectNotFoundError();
 
   const { data, error } = await supabaseClient.from('projects').delete().eq('id', id).select('id');
   if (error) throw new Error('Could not delete the project. Please try again.');
   if (!data?.length) throw new ProjectNotFoundError();
+  await drainAttachmentCleanup();
 }
 
 // Accessible projects (defined by RLS) with exact stage and task counts computed in the database.
@@ -79,5 +89,6 @@ export async function listProjects({ signal } = {}) {
     stageCount: Number(row.stage_count),
     openTasks: Number(row.open_tasks),
     doneTasks: Number(row.done_tasks),
+    isOwner: row.is_owner === true,
   }));
 }

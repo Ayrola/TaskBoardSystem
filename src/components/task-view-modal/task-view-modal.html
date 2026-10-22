@@ -12,6 +12,28 @@
         </p>
         <div class="task-description" data-description></div>
         <p class="text-body-secondary fst-italic mb-0" data-no-description hidden>No description.</p>
+
+        <section class="attachments mt-4" aria-labelledby="task-attachments-heading">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <h3 class="h6 mb-0" id="task-attachments-heading">
+              <i class="bi bi-paperclip" aria-hidden="true"></i> Attachments
+              <span class="badge text-bg-secondary rounded-pill ms-1" data-attachment-count hidden></span>
+            </h3>
+            <div>
+              <input type="file" class="visually-hidden" id="task-attachment-input" data-attachment-input tabindex="-1" aria-describedby="task-attachment-help" />
+              <button type="button" class="btn btn-sm btn-outline-primary" data-attachment-upload>
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" data-upload-spinner hidden></span>
+                <i class="bi bi-upload" aria-hidden="true" data-upload-icon></i>
+                <span data-upload-label>Upload file</span>
+              </button>
+            </div>
+          </div>
+          <p class="form-text mt-0" id="task-attachment-help" data-attachment-help></p>
+          <div class="alert alert-danger py-2 small" role="alert" data-attachment-error hidden></div>
+          <p class="text-body-secondary small" data-attachment-loading role="status">Loading attachments…</p>
+          <p class="text-body-secondary small mb-0" data-attachment-empty hidden>No attachments yet.</p>
+          <ul class="list-group attachment-list" data-attachment-list aria-label="Attachments" hidden></ul>
+        </section>
         <dl class="small text-body-secondary mt-4 mb-0 task-meta">
           <div><dt class="d-inline">Created:</dt> <dd class="d-inline" data-created></dd></div>
           <div data-updated-row><dt class="d-inline">Updated:</dt> <dd class="d-inline" data-updated></dd></div>
@@ -26,4 +48,24 @@
       </div>
     </div>
   </div>
-</div>
+            <template data-attachment-template>
+              <li class="list-group-item attachment-item">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi attachment-icon fs-4 text-body-secondary" aria-hidden="true" data-attachment-icon></i>
+                  <div class="min-w-0 flex-grow-1">
+                    <div class="fw-semibold text-break" data-attachment-name></div>
+                    <div class="small text-body-secondary" data-attachment-meta></div>
+                  </div>
+                  <div class="d-flex gap-1 flex-shrink-0" data-attachment-buttons>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-attachment-action="download"><i class="bi bi-download" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-attachment-action="remove"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                  </div>
+                </div>
+                <div class="attachment-confirm d-flex flex-wrap align-items-center gap-2 mt-2" role="group" data-attachment-confirm hidden>
+                  <span class="small">Remove this file permanently?</span>
+                  <button type="button" class="btn btn-sm btn-danger" data-attachment-action="confirm-remove">Remove</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" data-attachment-action="cancel-remove">Keep</button>
+                </div>
+              </li>
+            </template>
+          </div>

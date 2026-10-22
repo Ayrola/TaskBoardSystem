@@ -1,0 +1,23 @@
+.add-user-results {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.add-user-results .list-group-item {
+  overflow-wrap: anywhere;
+}
+
+.add-user-results button {
+  overflow-wrap: anywhere;
+}
+
+.add-user-results button:hover,
+.add-user-results button:focus-visible {
+  background-color: var(--bs-tertiary-bg) !important;
+}
+
+.add-user-results button.active {
+  background-color: var(--bs-primary) !important;
+  color: var(--bs-white);
+  font-weight: 600;
+}

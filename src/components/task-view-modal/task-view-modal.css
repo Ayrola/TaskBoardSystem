@@ -15,3 +15,11 @@
 .task-view-modal .task-description a {
   overflow-wrap: anywhere;
 }
+
+.task-view-modal .min-w-0 {
+  min-width: 0;
+}
+
+.task-view-modal .attachment-icon {
+  line-height: 1;
+}

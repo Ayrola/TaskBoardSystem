@@ -16,7 +16,7 @@ A Trello-style application where users manage projects, stages and tasks.
 - Clean up page event listeners and subscriptions when unmounting.
 - Use Supabase RLS as the authorization boundary.
 - Save and synchronize SQL migrations.
-- Do not introduce project membership in the initial implementation.
+- Project membership: the owner manages members; members can view the project and work with its tasks (see README).
 
 ## Canonical routes
 - `/`

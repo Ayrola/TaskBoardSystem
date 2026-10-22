@@ -44,6 +44,8 @@ export function initAuth() {
 
       client.auth.onAuthStateChange((event, session) => {
         const userChanged = applySession(session);
+        // Realtime channels belong to the signed-in user; never leave one open after sign-out.
+        if (event === 'SIGNED_OUT') setTimeout(() => client.removeAllChannels(), 0);
         // Deferred: Supabase advises against calling its APIs inside this callback.
         setTimeout(() => {
           for (const listener of [...listeners]) listener({ event, session: state.session, userChanged });

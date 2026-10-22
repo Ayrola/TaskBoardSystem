@@ -42,13 +42,17 @@
 
   <template data-row-template>
     <tr>
-      <th scope="row" class="fw-semibold" data-cell="title"></th>
+      <th scope="row" class="fw-semibold">
+        <span data-cell="title"></span>
+        <span class="badge ms-1 align-middle" data-cell="role"></span>
+      </th>
       <td class="project-description" data-cell="description"></td>
       <td class="text-end" data-cell="stageCount"></td>
       <td class="text-end" data-cell="openTasks"></td>
       <td class="text-end" data-cell="doneTasks"></td>
       <td class="text-nowrap">
         <a class="btn btn-sm btn-outline-primary" data-action="tasks">View Tasks</a>
+        <a class="btn btn-sm btn-outline-secondary" data-action="users">Users</a>
         <a class="btn btn-sm btn-outline-secondary" data-action="edit">Edit</a>
         <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button>
       </td>

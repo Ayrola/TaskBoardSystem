@@ -1,0 +1,39 @@
+<div class="modal fade add-user-modal" tabindex="-1" aria-labelledby="add-user-title">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" novalidate>
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="add-user-title">Add user</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label for="add-user-search" class="form-label">Search registered users</label>
+        <input
+          id="add-user-search"
+          type="search"
+          class="form-control"
+          autocomplete="off"
+          maxlength="100"
+          placeholder="Name or email"
+          aria-describedby="add-user-hint"
+          data-search
+        />
+        <div id="add-user-hint" class="form-text">Type at least 2 characters. Up to 10 matches are shown.</div>
+
+        <div class="add-user-status small text-body-secondary mt-3 d-flex align-items-center gap-2" role="status" aria-live="polite">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true" data-searching hidden></span>
+          <span data-status></span>
+        </div>
+        <ul class="list-group add-user-results mt-1" aria-label="Matching users" data-results></ul>
+
+        <div class="alert alert-danger mt-3 mb-0" role="alert" data-error hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-cancel>Cancel</button>
+        <button type="submit" class="btn btn-primary" data-submit disabled>
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" data-spinner hidden></span>
+          <span data-submit-label>Add user</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

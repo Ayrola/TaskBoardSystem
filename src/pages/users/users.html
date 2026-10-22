@@ -1,7 +1,70 @@
-<section class="page-users">
-  <h1 class="h2">Project users</h1>
-  <p class="text-body-secondary">
-    Placeholder for project <code data-project-id></code>. Project membership is not part of the initial implementation.
-  </p>
-  <a class="btn btn-outline-secondary" data-link="tasks" href="#">Back to tasks</a>
+<section class="page-users" aria-labelledby="users-heading" aria-busy="true">
+  <nav aria-label="Breadcrumb" class="mb-2">
+    <a href="/projects" class="link-secondary text-decoration-none small"><i class="bi bi-arrow-left" aria-hidden="true"></i> All projects</a>
+  </nav>
+
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+    <div class="min-w-0">
+      <h1 id="users-heading" class="h2 mb-1">Project users</h1>
+      <p class="text-body-secondary mb-0 text-break" data-project-title></p>
+    </div>
+    <div class="d-flex flex-wrap gap-2" data-actions hidden>
+      <a class="btn btn-outline-secondary" data-link="tasks" href="#"><i class="bi bi-kanban" aria-hidden="true"></i> Back to tasks</a>
+      <button type="button" class="btn btn-primary" data-add><i class="bi bi-person-plus" aria-hidden="true"></i> Add user</button>
+    </div>
+  </div>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading users…</span>
+  </div>
+
+  <div data-state="notfound" class="card" hidden>
+    <div class="card-body text-center py-5">
+      <i class="bi bi-question-circle display-5 text-body-secondary" aria-hidden="true"></i>
+      <h2 class="h5 mt-3">Project not found</h2>
+      <p class="text-body-secondary mb-3">
+        This project does not exist, or only its owner can manage its users.
+      </p>
+      <a class="btn btn-primary" href="/projects">Back to projects</a>
+    </div>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load the project users.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="table" hidden>
+    <p class="text-body-secondary" data-no-members hidden>
+      Only you can access this project so far. Use “Add user” to share it. Added users can view the project and work with its tasks, but cannot edit or delete the project or manage users.
+    </p>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle users-table">
+        <caption class="visually-hidden">Users with access to this project</caption>
+        <thead>
+          <tr>
+            <th scope="col">User</th>
+            <th scope="col">Role</th>
+            <th scope="col">Added</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+  </div>
+
+  <template data-row-template>
+    <tr>
+      <th scope="row" class="fw-semibold text-break" data-cell="label"></th>
+      <td><span class="badge" data-cell="role"></span></td>
+      <td class="text-nowrap" data-cell="added"></td>
+      <td class="text-end text-nowrap">
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="remove">
+          <i class="bi bi-person-dash" aria-hidden="true"></i> Remove
+        </button>
+      </td>
+    </tr>
+  </template>
 </section>

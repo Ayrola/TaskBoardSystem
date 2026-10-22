@@ -41,6 +41,16 @@ export function mount(container, ctx) {
     edit.href = `/projects/${id}/edit`;
     edit.setAttribute('aria-label', `Edit ${project.title}`);
     row.querySelector('[data-action="delete"]').setAttribute('aria-label', `Delete ${project.title}`);
+    const role = setText(row, '[data-cell="role"]', project.isOwner ? 'Owned' : 'Member');
+    role.classList.add(project.isOwner ? 'text-bg-primary' : 'text-bg-secondary');
+    const users = row.querySelector('[data-action="users"]');
+    users.href = `/projects/${id}/users`;
+    users.setAttribute('aria-label', `Manage users of ${project.title}`);
+    if (!project.isOwner) {
+      edit.hidden = true;
+      users.hidden = true;
+      row.querySelector('[data-action="delete"]').hidden = true;
+    }
     return row;
   }
 
@@ -67,7 +77,7 @@ export function mount(container, ctx) {
       title: 'Delete project?',
       lead: `Are you sure you want to delete “${project.title}”?`,
       detail:
-        'All stages and tasks in this project will also be permanently removed. This cannot be undone.',
+        'All stages, tasks and attachments in this project will also be permanently removed. This cannot be undone.',
       confirmLabel: 'Delete project',
       onConfirm: async () => {
         try {

@@ -1,6 +1,7 @@
 import { supabaseClient } from './supabase-client.js';
 import { isUuid } from '../utils/validation.js';
 import { sanitizeRichText, RICH_TEXT_MAX_LENGTH } from '../utils/sanitize.js';
+import { drainAttachmentCleanup } from './attachments-service.js';
 
 // Raised when the task or stage does not exist or is not accessible; both look the same on purpose.
 export class TaskNotFoundError extends Error {
@@ -55,6 +56,8 @@ export async function deleteTask(taskId) {
   const { error } = await supabaseClient.rpc('delete_task', { p_task_id: taskId });
   if (error?.code === NOT_FOUND_CODE) throw new TaskNotFoundError();
   if (error) throw new Error('Could not delete the task. Please try again.');
+  // The task's attachment rows were removed with it; remove their files too (best effort, retried later).
+  await drainAttachmentCleanup();
 }
 
 // Moves one task to `index` in the destination stage. Only IDs of the dragged task and the stage are sent;

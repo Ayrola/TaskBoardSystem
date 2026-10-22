@@ -3,8 +3,11 @@ import html from './tasks.html?raw';
 import './tasks.css';
 import { renderFragment, setText, htmlToExcerpt } from '../../utils/render.js';
 import { getBoard } from '../../services/board-service.js';
-import { ProjectNotFoundError } from '../../services/projects-service.js';
+import { ProjectNotFoundError, getProject } from '../../services/projects-service.js';
 import { createTask, updateTask, deleteTask, moveTask, TaskNotFoundError } from '../../services/tasks-service.js';
+import { drainAttachmentCleanup } from '../../services/attachments-service.js';
+import { subscribeToBoard } from '../../services/board-realtime.js';
+import { onAuthChange } from '../../services/auth-service.js';
 import { openTaskFormModal } from '../../components/task-form-modal/task-form-modal.js';
 import { openTaskViewModal } from '../../components/task-view-modal/task-view-modal.js';
 import { openMoveTaskModal } from '../../components/move-task-modal/move-task-modal.js';
@@ -12,6 +15,8 @@ import { openConfirmDialog } from '../../components/confirm-dialog/confirm-dialo
 import { showSuccess, showInfo, showError, TOAST_MESSAGES } from '../../services/toast-service.js';
 
 export const title = 'Tasks';
+
+const REFRESH_DEBOUNCE_MS = 300;
 
 export function mount(container, ctx) {
   const { params } = ctx;
@@ -29,6 +34,10 @@ export function mount(container, ctx) {
   let stale = false; // a save failed because the task or stage no longer exists
   let moving = false; // a move request is in flight; further moves are blocked until it is reconciled
   let sortables = [];
+  let dragging = false; // a drag is in progress; re-rendering now would destroy it
+  let pendingRefresh = false; // a realtime change arrived while the board could not be re-rendered
+  let refreshTimer = 0;
+  let realtime = null;
   const savingSpinner = root.querySelector('[data-saving-spinner]');
   const savingText = root.querySelector('[data-saving-text]');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -60,10 +69,17 @@ export function mount(container, ctx) {
         emptyInsertThreshold: 24,
         forceFallback: false,
         disabled: moving,
-        onStart: () => board.classList.add('is-dragging'),
+        onStart: () => {
+          dragging = true;
+          board.classList.add('is-dragging');
+        },
         onEnd: (event) => {
+          dragging = false;
           board.classList.remove('is-dragging');
-          if (event.from === event.to && event.oldIndex === event.newIndex) return;
+          if (event.from === event.to && event.oldIndex === event.newIndex) {
+            flushPending();
+            return;
+          }
           const stageId = event.to.closest('.board-column')?.dataset.stageId;
           performMove(event.item.dataset.taskId, stageId, event.newIndex);
         },
@@ -122,6 +138,8 @@ export function mount(container, ctx) {
     setText(root, '[data-heading]', project.title);
     const description = setText(root, '[data-project-description]', project.description);
     description.hidden = !project.description;
+    root.querySelector('[data-link="edit"]').hidden = !project.isOwner;
+    root.querySelector('[data-link="users"]').hidden = !project.isOwner;
     root.querySelector('[data-link="edit"]').href = `/projects/${id}/edit`;
     root.querySelector('[data-link="users"]').href = `/projects/${id}/users`;
     actions.hidden = false;
@@ -152,10 +170,12 @@ export function mount(container, ctx) {
   // `quiet` refreshes in place (after a change) without replacing the board with the loading state.
   async function load({ quiet = false } = {}) {
     const current = ++requestId;
+    pendingRefresh = false; // this load already reads the newest state
     if (!quiet) show('loading');
     try {
       const loaded = await getBoard(params.id, { signal: ctx.signal });
-      if (current !== requestId || ctx.signal.aborted) return;
+      // Ignore answers that belong to an older request or to a previously opened project.
+      if (current !== requestId || ctx.signal.aborted || loaded.project.id !== params.id) return;
       data = loaded;
       render(loaded);
       show('board');
@@ -164,13 +184,60 @@ export function mount(container, ctx) {
       data = null;
       actions.hidden = true;
       if (error instanceof ProjectNotFoundError) {
-        setText(root, '[data-heading]', 'Project not found');
-        show('notfound');
+        handleAccessLost();
       } else {
         setText(root, '[data-error-text]', error.message);
         show('error');
       }
     }
+  }
+
+  const isBusy = () => moving || flowActive || dragging;
+
+  // The project vanished or this user lost access. A denied reload proves it; the UI is not the boundary.
+  function handleAccessLost() {
+    clearTimeout(refreshTimer);
+    realtime?.unsubscribe();
+    activeDialog?.destroy();
+    data = null;
+    actions.hidden = true;
+    setText(root, '[data-heading]', 'Project not found');
+    setLive(true);
+    show('notfound');
+  }
+
+  // Cheap authoritative check used when a reload has to wait (open editor, drag, save in flight).
+  async function checkAccess() {
+    try {
+      await getProject(params.id, { signal: ctx.signal });
+    } catch (error) {
+      if (!ctx.signal.aborted && error instanceof ProjectNotFoundError) handleAccessLost();
+    }
+  }
+
+  // A reload never runs underneath an open editor, a drag or a pending save, so unsaved fields and in-flight
+  // moves are not overwritten. It is flushed as soon as that work ends.
+  function refresh() {
+    if (ctx.signal.aborted) return;
+    if (isBusy()) {
+      pendingRefresh = true;
+      checkAccess();
+      return;
+    }
+    load({ quiet: true });
+  }
+
+  function flushPending() {
+    if (pendingRefresh && !isBusy() && !ctx.signal.aborted) load({ quiet: true });
+  }
+
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refresh, REFRESH_DEBOUNCE_MS);
+  }
+
+  function setLive(online) {
+    root.querySelector('[data-live-status]').textContent = online ? '' : 'Live updates paused. Reconnecting…';
   }
 
   async function runDialog(open) {
@@ -197,6 +264,8 @@ export function mount(container, ctx) {
       stale = false;
       await load({ quiet: true });
       if (ctx.signal.aborted) return;
+    } else {
+      flushPending();
     }
     restoreFocus(focusTarget);
   }
@@ -256,7 +325,7 @@ export function mount(container, ctx) {
       openConfirmDialog({
         title: 'Delete task?',
         lead: `Are you sure you want to delete “${task.title}”?`,
-        detail: 'This task will be permanently removed. This cannot be undone.',
+        detail: 'This task and its attachments will be permanently removed. This cannot be undone.',
         confirmLabel: 'Delete task',
         onConfirm: async () => {
           try {
@@ -314,6 +383,7 @@ export function mount(container, ctx) {
       if (!ctx.signal.aborted) setSaving(false);
     }
     if (restoreFocusTo && !ctx.signal.aborted) restoreFocus({ taskId });
+    flushPending();
   }
 
   async function moveViaDialog(taskId) {
@@ -329,13 +399,16 @@ export function mount(container, ctx) {
     }
     if (ctx.signal.aborted) return;
     if (choice) await performMove(taskId, choice.stageId, choice.index, { restoreFocusTo: true });
-    else restoreFocus({ taskId });
+    else {
+      flushPending();
+      restoreFocus({ taskId });
+    }
   }
 
   async function viewTask(taskId) {
     const found = findTask(taskId);
     if (!found) return false;
-    const action = await runDialog(() => openTaskViewModal(found));
+    const action = await runDialog(() => openTaskViewModal({ ...found, projectId: data.project.id }));
     if (ctx.signal.aborted) return false;
     if (action === 'edit') return editTask(found);
     if (action === 'delete') return removeTask(found);
@@ -374,5 +447,28 @@ export function mount(container, ctx) {
   ctx.cleanup.listen(root.querySelector('[data-retry]'), 'click', () => load());
   ctx.cleanup.add(() => activeDialog?.destroy());
   ctx.cleanup.add(destroySortables);
+  ctx.cleanup.add(() => clearTimeout(refreshTimer));
+
+  // Subscribe only while this page is mounted. After every (re)join a fresh load closes any gap.
+  realtime = subscribeToBoard(params.id, {
+    onNotify: (kind) => {
+      if (ctx.signal.aborted) return;
+      if (kind === 'access') checkAccess();
+      scheduleRefresh();
+    },
+    onSubscribed: () => {
+      setLive(true);
+      scheduleRefresh();
+    },
+    onOffline: () => setLive(false),
+  });
+  ctx.cleanup.add(() => realtime?.unsubscribe());
+  ctx.cleanup.add(
+    onAuthChange(({ session, userChanged }) => {
+      if (!session || userChanged) realtime?.unsubscribe();
+    }),
+  );
+
+  drainAttachmentCleanup(); // finishes file removals an earlier session could not complete
   load();
 }
