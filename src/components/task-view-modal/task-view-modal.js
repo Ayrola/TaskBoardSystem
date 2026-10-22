@@ -1,3 +1,4 @@
+import { listTaskAssignees, searchTaskAssignees, setTaskAssignee } from '../../services/assignees-service.js';
 import html from './task-view-modal.html?raw';
 import './task-view-modal.css';
 import { mountModal } from '../../utils/modal-host.js';
@@ -36,6 +37,9 @@ const FILE_ICONS = {
 export function openTaskViewModal({ task, stage, projectId }) {
   const modal = mountModal(html, { dismissedValue: null });
   const { element, signal } = modal;
+  let assignmentBusy = false;
+  let attachmentBusy = false;
+  modal.setCanClose(() => !assignmentBusy && !attachmentBusy);
 
   setText(element, '[data-task-title]', task.title);
   setText(element, '[data-stage-badge]', stage?.name ?? '');
@@ -60,6 +64,7 @@ export function openTaskViewModal({ task, stage, projectId }) {
   deleteButton.addEventListener('click', () => modal.close('delete'), { signal });
   element.addEventListener('shown.bs.modal', () => editButton.focus(), { signal });
 
+  setupAssignees();
   setupAttachments();
   setupComments();
 
@@ -69,6 +74,108 @@ export function openTaskViewModal({ task, stage, projectId }) {
   // Discussion: plain text only. Bodies are written with textContent (never innerHTML) and wrapped with CSS
   // pre-wrap, so markup typed by a user is shown literally. Pages are keyset-paged newest first; a generation
   // counter drops answers that arrive after a reload so pages are never mixed.
+  function setupAssignees() {
+    const list = element.querySelector('[data-assignee-list]');
+    const results = element.querySelector('[data-assignee-results]');
+    const search = element.querySelector('[data-assignee-search]');
+    const empty = element.querySelector('[data-assignee-empty]');
+    const status = element.querySelector('[data-assignee-status]');
+    const errorBox = element.querySelector('[data-assignee-error]');
+    let assigned = [];
+    let candidates = [];
+    let busy = false;
+    let loaded = false;
+    let generation = 0;
+    let timer;
+    signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
+
+    function showError(message = '') {
+      errorBox.textContent = message;
+      errorBox.hidden = !message;
+    }
+    function row(user, remove) {
+      const item = document.createElement('li');
+      item.className = 'list-group-item d-flex align-items-center justify-content-between gap-2';
+      const label = document.createElement('span');
+      label.className = 'text-break';
+      label.textContent = user.label;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-sm btn-outline-' + (remove ? 'danger' : 'primary');
+      button.textContent = remove ? 'Remove' : 'Assign';
+      button.setAttribute('aria-label', `${remove ? 'Unassign' : 'Assign'} ${user.label}`);
+      button.disabled = busy || !loaded;
+      button.addEventListener('click', () => change(user, !remove), { signal });
+      item.append(label, button);
+      return item;
+    }
+    function render() {
+      list.replaceChildren(...assigned.map((user) => row(user, true)));
+      empty.hidden = assigned.length > 0;
+      empty.textContent = loaded ? 'Unassigned.' : 'Loading assignees...';
+      const available = candidates.filter((user) => !assigned.some((a) => a.user_id === user.user_id));
+      results.replaceChildren(...available.map((user) => row(user, false)));
+      status.textContent = available.length ? '' : 'No matching unassigned participants.';
+    }
+    async function find() {
+      const current = ++generation;
+      results.replaceChildren();
+      status.textContent = 'Searching...';
+      try {
+        const found = await searchTaskAssignees(projectId, search.value, { signal });
+        if (signal.aborted || current !== generation) return;
+        candidates = found;
+        render();
+      } catch (error) {
+        if (!signal.aborted && current === generation) { status.textContent = ''; showError(error.message); }
+      }
+    }
+    async function change(user, add) {
+      if (busy || !loaded) return;
+      busy = true;
+      assignmentBusy = true;
+      editButton.disabled = true;
+      deleteButton.disabled = true;
+      showError();
+      render();
+      try {
+        await setTaskAssignee(task.id, user.user_id, add);
+        if (signal.aborted) return;
+        assigned = await listTaskAssignees([task.id], { signal });
+        await find();
+      } catch (error) {
+        if (!signal.aborted) showError(error.message);
+      } finally {
+        busy = false;
+        assignmentBusy = false;
+        if (!signal.aborted) {
+          editButton.disabled = attachmentBusy;
+          deleteButton.disabled = attachmentBusy;
+          render();
+        }
+      }
+    }
+    search.addEventListener('input', () => {
+      clearTimeout(timer);
+      generation += 1;
+      candidates = [];
+      results.replaceChildren();
+      timer = setTimeout(find, 200);
+    }, { signal });
+    async function load() {
+      try {
+        assigned = await listTaskAssignees([task.id], { signal });
+        if (signal.aborted) return;
+        loaded = true;
+        render();
+        await find();
+      } catch (error) {
+        if (!signal.aborted) { empty.textContent = 'Assignees unavailable.'; showError(error.message); }
+      }
+    }
+    load();
+  }
+
   function setupComments() {
     const form = element.querySelector('[data-comment-form]');
     const input = element.querySelector('[data-comment-input]');
@@ -317,7 +424,7 @@ export function openTaskViewModal({ task, stage, projectId }) {
     input.accept = ATTACHMENT_ACCEPT;
     setText(element, '[data-attachment-help]', ATTACHMENT_HELP);
     uploadButton.disabled = true; // enabled once the list has loaded
-    modal.setCanClose(() => !busy);
+
 
     const showError = (message) => {
       errorBox.textContent = message ?? '';
@@ -326,12 +433,13 @@ export function openTaskViewModal({ task, stage, projectId }) {
 
     function setBusy(active, label = 'Upload file') {
       busy = active;
+      attachmentBusy = active;
       spinner.hidden = !active;
       uploadIcon.hidden = active;
       uploadLabel.textContent = label;
       uploadButton.disabled = active;
-      editButton.disabled = active;
-      deleteButton.disabled = active;
+      editButton.disabled = active || assignmentBusy;
+      deleteButton.disabled = active || assignmentBusy;
       for (const button of list.querySelectorAll('button')) button.disabled = active;
     }
 

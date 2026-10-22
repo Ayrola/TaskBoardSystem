@@ -13,6 +13,18 @@
         <div class="task-description" data-description></div>
         <p class="text-body-secondary fst-italic mb-0" data-no-description hidden>No description.</p>
 
+        <section class="mt-4" aria-labelledby="task-assignees-heading">
+          <h3 class="h6" id="task-assignees-heading">Assignees</h3>
+          <ul class="list-group mb-2" data-assignee-list aria-label="Current assignees"></ul>
+          <p class="small text-body-secondary" data-assignee-empty>Loading assignees...</p>
+          <label class="form-label small" for="task-assignee-search">Assign project participants</label>
+          <input type="search" class="form-control" id="task-assignee-search" data-assignee-search placeholder="Search by name or email" maxlength="100" />
+          <p class="form-text">Project owner and current members only. Up to 50 matches; type to narrow the search.</p>
+          <div class="alert alert-danger py-2 small" role="alert" data-assignee-error hidden></div>
+          <p class="small text-body-secondary" role="status" data-assignee-status></p>
+          <ul class="list-group" data-assignee-results aria-label="Available project participants"></ul>
+        </section>
+
         <section class="attachments mt-4" aria-labelledby="task-attachments-heading">
           <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
             <h3 class="h6 mb-0" id="task-attachments-heading">

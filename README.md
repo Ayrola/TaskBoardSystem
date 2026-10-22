@@ -226,3 +226,10 @@ If a step fails the user sees which one, and pressing delete again continues (th
 2. Set the secret: `supabase secrets set ALLOWED_ORIGINS="https://your-app.example,http://localhost:5173"` (`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically).
 3. Deploy: `supabase functions deploy admin-users --no-verify-jwt` (the function authenticates the token itself, which also works with the new publishable/secret API keys).
 4. Smoke-test as an admin and as a non-admin (expect 403).
+
+
+### Task assignees
+
+Apply `supabase/migrations/20261022220000_task_assignees.sql` before running the updated client (`supabase db push`). Open a task to search project participants and assign or remove multiple responsible people. Cards show their names. Owners and current members can manage assignments; unrelated users cannot be assigned, even through direct API inserts. Removing a project member clears their assignments in the same transaction. Assignment changes refresh connected boards.
+
+Run `npm run test:assignees` for isolated PostgreSQL checks of the migration, participant directory, RLS, assignment eligibility, duplicate prevention, membership removal, and cascading task deletion. The test uses PGlite with minimal existing-schema fixtures; it does not connect to the deployed database or exercise concurrent transactions.

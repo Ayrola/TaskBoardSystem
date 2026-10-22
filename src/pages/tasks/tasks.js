@@ -104,6 +104,8 @@ export function mount(container, ctx) {
     const card = cardTemplate.content.firstElementChild.cloneNode(true);
     card.dataset.taskId = task.id;
     setText(card, '[data-task-title]', task.title);
+    setText(card, '[data-task-assignees]', task.assignees?.length
+      ? `Assigned: ${task.assignees.map((a) => a.label).join(', ')}` : 'Unassigned');
     const excerpt = htmlToExcerpt(task.description);
     if (excerpt) {
       const element = setText(card, '[data-task-excerpt]', excerpt);
@@ -489,7 +491,7 @@ export function mount(container, ctx) {
     if (ctx.signal.aborted) return false;
     if (action === 'edit') return editTask(found);
     if (action === 'delete') return removeTask(found);
-    return false;
+    return true; // Assignment changes in details must also refresh the cards.
   }
 
   // Scrolling near the bottom of a column loads its next page; scroll events do not bubble, so capture them.

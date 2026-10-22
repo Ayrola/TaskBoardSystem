@@ -1,3 +1,4 @@
+import { listTaskAssignees } from './assignees-service.js';
 import { supabaseClient } from './supabase-client.js';
 import { getProject } from './projects-service.js';
 import { isUuid } from '../utils/validation.js';
@@ -58,9 +59,10 @@ export async function fetchColumnTasks(stageId, { cursor = null, limit = BOARD_P
 
   const hasMore = data.length > size;
   const rows = hasMore ? data.slice(0, size) : data;
+  const assignees = await listTaskAssignees(rows.map((task) => task.id), { signal });
   const last = rows.at(-1);
   return {
-    tasks: rows.map(mapTask),
+    tasks: rows.map((row) => ({ ...mapTask(row), assignees: assignees.filter((a) => a.task_id === row.id) })),
     hasMore,
     nextCursor: hasMore && last ? { position: last.position, id: last.id } : null,
   };

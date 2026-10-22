@@ -12,7 +12,8 @@
     "seed:loadtest": "node scripts/seed-loadtest.js --confirm-dev",
     "seed:loadtest:dry": "node scripts/seed-loadtest.js --dry-run",
     "seed:loadtest:cleanup": "node scripts/seed-loadtest.js --cleanup --confirm-dev",
-    "bootstrap-admin": "node scripts/bootstrap-admin.js"
+    "bootstrap-admin": "node scripts/bootstrap-admin.js",
+    "test:assignees": "node scripts/test-task-assignees.mjs"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +30,7 @@
     "sortablejs": "1.15.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "vite": "^8.3.5"
   }
 }
