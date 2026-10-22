@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Client-side router (History API): serve index.html for every path that is not a real file.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

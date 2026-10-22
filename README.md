@@ -50,6 +50,21 @@ Records have deterministic IDs, so reruns skip anything that already exists. Exi
 keep their passwords, and no unrelated records are modified. Users are created as already
 confirmed, so no emails are sent.
 
+## Deploying to Netlify
+
+`netlify.toml` sets the build (`npm run build`, publish `dist`) and rewrites every path to
+`index.html` so deep links such as `/projects` work with the History API router.
+
+Vite inlines `VITE_*` values at **build time**, and `.env` is git-ignored, so set them in
+Netlify under *Site configuration → Environment variables* (then trigger a new deploy):
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Only the public URL and publishable key belong here. Never add the service role key to Netlify
+for this site. Afterwards, in Supabase *Authentication → URL Configuration*, set the Site URL to
+your Netlify URL and add it to the redirect URLs.
+
 ## Structure
 
 - `src/` – application code (`pages/`, `components/`, `services/`, `utils/`)
