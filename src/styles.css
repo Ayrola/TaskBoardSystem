@@ -1,1 +1,7 @@
 /* Global styles. Page and component styles live next to their own files. */
+
+/* Programmatic focus after navigation should not show a focus ring. */
+#app:focus,
+#app [tabindex='-1']:focus {
+  outline: none;
+}
