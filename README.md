@@ -17,6 +17,39 @@ npm run dev
 - `npm run build` – production build to `dist/`
 - `npm run preview` – preview the production build
 
+## Authentication
+
+Email and password auth uses Supabase Auth through `src/services/auth-service.js`.
+Private routes (`/dashboard` and everything under `/projects`) require a session.
+
+**Classroom setting (manual): disable email confirmation.** This cannot be changed from the
+code or the MCP tools, so do it once in the Supabase dashboard for the classroom project:
+
+1. Open the project, then **Authentication**.
+2. Go to **Sign In / Providers** and open the **Email** provider.
+3. Turn **off** *Confirm email* and click **Save**.
+4. Verify with the project's public settings: `mailer_autoconfirm` must be `true`
+   (`GET https://<project-ref>.supabase.co/auth/v1/settings` with the `apikey` header).
+
+While confirmation is still enabled, registering shows a "Check your email" notice and no
+session is created until the link is opened.
+
+## Classroom seed data
+
+`scripts/seed-classroom.js` is a server-side script that creates three demo Auth users
+(steve, maria, peter @gmail.com) through the Supabase Auth Admin API, plus four fictional
+projects, each with three default stages and twelve tasks. It never runs in the browser.
+
+1. Copy `.env.seed.example` to `.env.seed` (git-ignored) and paste the project's
+   service role / secret key into `SEED_SERVICE_ROLE_KEY`. Never use a `VITE_` prefix.
+2. Preview without writing anything: `npm run seed:dry`
+3. Seed: `npm run seed`
+
+The script refuses to run unless the URL's project reference equals `SEED_PROJECT_REF`.
+Records have deterministic IDs, so reruns skip anything that already exists. Existing users
+keep their passwords, and no unrelated records are modified. Users are created as already
+confirmed, so no emails are sent.
+
 ## Structure
 
 - `src/` – application code (`pages/`, `components/`, `services/`, `utils/`)

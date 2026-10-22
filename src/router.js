@@ -1,5 +1,6 @@
 import { routes, notFoundRoute } from './routes.js';
 import { createCleanup } from './utils/cleanup.js';
+import { initAuth, isAuthReady, getCurrentSession, onAuthChange } from './services/auth-service.js';
 
 const APP_NAME = 'Taskboard';
 
@@ -44,8 +45,25 @@ export function onRouteChange(listener) {
   return () => listeners.delete(listener);
 }
 
+// Accepts only same-origin, in-app paths to a real, non-guest route. Prevents open redirects.
+export function safeReturnTo(value) {
+  if (typeof value !== 'string' || !value.startsWith('/')) return null;
+  if (value.startsWith('//') || value.includes('\\') || /[\u0000-\u001f\u007f]/.test(value)) return null;
+  let url;
+  try {
+    url = new URL(value, location.origin);
+  } catch {
+    return null;
+  }
+  if (url.origin !== location.origin) return null;
+  const { route, notFound } = resolve(url.pathname);
+  if (notFound || route.access === 'guest') return null;
+  return url.pathname + url.search + url.hash;
+}
+
 function unmountCurrent() {
   if (!current) return;
+  current.controller.abort(); // cancels pending page requests that listen to ctx.signal
   current.cleanup.run();
   outlet.replaceChildren();
   current = null;
@@ -56,6 +74,14 @@ function moveFocus() {
   if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
   target.focus({ preventScroll: true });
   window.scrollTo(0, 0);
+}
+
+function showLoading() {
+  const status = document.createElement('div');
+  status.className = 'text-body-secondary';
+  status.setAttribute('role', 'status');
+  status.textContent = 'Loading…';
+  outlet.replaceChildren(status);
 }
 
 function showError(message) {
@@ -75,6 +101,22 @@ async function render({ focus }) {
   unmountCurrent();
   renderedKey = url.pathname + url.search;
 
+  // Access is decided only after the stored session has been restored.
+  if (!isAuthReady()) showLoading();
+  await initAuth();
+  if (token !== renderToken) return;
+
+  const session = getCurrentSession();
+  if (route.access === 'private' && !session) {
+    const returnTo = encodeURIComponent(url.pathname + url.search);
+    navigate(`/login?returnTo=${returnTo}`, { replace: true });
+    return;
+  }
+  if (route.access === 'guest' && session) {
+    navigate(safeReturnTo(url.searchParams.get('returnTo')) ?? '/dashboard', { replace: true });
+    return;
+  }
+
   let page;
   try {
     page = await route.load();
@@ -88,8 +130,18 @@ async function render({ focus }) {
   if (token !== renderToken) return; // a newer navigation superseded this one
 
   const cleanup = createCleanup();
-  const ctx = { params, query, path: url.pathname, notFound: Boolean(notFound), cleanup, navigate };
-  current = { cleanup };
+  const controller = new AbortController();
+  const ctx = {
+    params,
+    query,
+    path: url.pathname,
+    notFound: Boolean(notFound),
+    user: session?.user ?? null,
+    signal: controller.signal,
+    cleanup,
+    navigate,
+  };
+  current = { cleanup, controller };
 
   try {
     cleanup.add(await page.mount(outlet, ctx));
@@ -150,9 +202,20 @@ export function startRouter(container) {
   outlet = container;
   document.addEventListener('click', onClick);
   window.addEventListener('popstate', onPopState);
+
+  // A different user (or none) means the mounted page may hold the previous user's data:
+  // leave private pages on sign-out, otherwise remount so everything is rebuilt and re-checked.
+  const stopAuthWatch = onAuthChange(({ session, userChanged }) => {
+    if (!userChanged) return;
+    const { route } = resolve(location.pathname);
+    if (!session && route.access === 'private') navigate('/', { replace: true });
+    else render({ focus: false });
+  });
+
   render({ focus: false });
 
   return () => {
+    stopAuthWatch();
     document.removeEventListener('click', onClick);
     window.removeEventListener('popstate', onPopState);
     renderToken++;

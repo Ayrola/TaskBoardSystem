@@ -1,7 +1,43 @@
 /* Global styles. Page and component styles live next to their own files. */
 
+/* Bootstrap utilities such as .d-flex use !important and would otherwise defeat [hidden]. */
+[hidden] {
+  display: none !important;
+}
+
 /* Programmatic focus after navigation should not show a focus ring. */
 #app:focus,
 #app [tabindex='-1']:focus {
   outline: none;
+}
+
+/* Visible keyboard focus for interactive elements. */
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--bs-primary);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Toast notifications */
+.toast-host {
+  z-index: 1090;
+  width: min(100%, 24rem);
+  pointer-events: none;
+}
+
+.toast-host .toast {
+  pointer-events: auto;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

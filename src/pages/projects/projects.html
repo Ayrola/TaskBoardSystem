@@ -1,8 +1,57 @@
-<section class="page-projects">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h2 mb-0">Projects</h1>
-    <a class="btn btn-primary" href="/projects/add">Add project</a>
+<section class="page-projects" aria-labelledby="projects-heading" aria-busy="true">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 id="projects-heading" class="h2 mb-0">Projects</h1>
+    <a class="btn btn-primary" href="/projects/add"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add project</a>
   </div>
-  <p class="text-body-secondary">Placeholder: the project list will appear here.</p>
-  <p class="small">Sample links: <a href="/projects/demo/tasks">demo project board</a></p>
+
+  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span>Loading your projects…</span>
+  </div>
+
+  <div data-state="error" class="alert alert-danger" role="alert" hidden>
+    <p class="mb-2" data-error-text>Could not load your projects.</p>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  </div>
+
+  <div data-state="empty" class="card" hidden>
+    <div class="card-body text-center py-5">
+      <i class="bi bi-folder-plus display-5 text-body-secondary" aria-hidden="true"></i>
+      <h2 class="h5 mt-3">No projects yet</h2>
+      <p class="text-body-secondary mb-3">Create a project to get Not Started, In Progress and Done stages automatically.</p>
+      <a class="btn btn-primary" href="/projects/add">Add your first project</a>
+    </div>
+  </div>
+
+  <div data-state="table" class="table-responsive" hidden>
+    <table class="table table-hover align-middle projects-table">
+      <caption class="visually-hidden">Your projects with stage and task counts</caption>
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Description</th>
+          <th scope="col" class="text-end">Stages</th>
+          <th scope="col" class="text-end">Open Tasks</th>
+          <th scope="col" class="text-end">Tasks Done</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody data-rows></tbody>
+    </table>
+  </div>
+
+  <template data-row-template>
+    <tr>
+      <th scope="row" class="fw-semibold" data-cell="title"></th>
+      <td class="project-description" data-cell="description"></td>
+      <td class="text-end" data-cell="stageCount"></td>
+      <td class="text-end" data-cell="openTasks"></td>
+      <td class="text-end" data-cell="doneTasks"></td>
+      <td class="text-nowrap">
+        <a class="btn btn-sm btn-outline-primary" data-action="tasks">View Tasks</a>
+        <a class="btn btn-sm btn-outline-secondary" data-action="edit">Edit</a>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" aria-disabled="true">Delete</button>
+      </td>
+    </tr>
+  </template>
 </section>

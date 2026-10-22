@@ -1,3 +1,18 @@
 .app-header .navbar-brand {
   letter-spacing: 0.02em;
 }
+
+.app-header .nav-link,
+.app-header .navbar-brand,
+.app-header .btn {
+  border-radius: 0.375rem;
+}
+
+.app-header .nav-link:focus-visible,
+.app-header .navbar-brand:focus-visible,
+.app-header .btn:focus-visible,
+.app-header .navbar-toggler:focus-visible {
+  outline: 3px solid var(--bs-primary);
+  outline-offset: 2px;
+  box-shadow: none;
+}

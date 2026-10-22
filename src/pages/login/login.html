@@ -1,4 +1,69 @@
-<section class="page-login">
-  <h1 class="h2">Log in</h1>
-  <p class="text-body-secondary">Placeholder: authentication is not implemented yet.</p>
+<section class="page-login mx-auto" aria-labelledby="login-heading">
+  <h1 id="login-heading" class="h2 mb-1" data-heading></h1>
+  <p class="text-body-secondary mb-4" data-subheading></p>
+
+  <div class="alert alert-danger" role="alert" data-alert hidden></div>
+
+  <div class="alert alert-success" role="status" data-confirm-notice hidden>
+    <h2 class="h6 alert-heading">Check your email</h2>
+    <p class="mb-0">
+      If this address can be registered, we have sent a confirmation link to it.
+      Open the link, then log in.
+    </p>
+  </div>
+
+  <form novalidate data-form>
+    <div class="mb-3">
+      <label class="form-label" for="auth-email">Email</label>
+      <input
+        class="form-control"
+        id="auth-email"
+        name="email"
+        type="email"
+        autocomplete="email"
+        inputmode="email"
+        autocapitalize="none"
+        spellcheck="false"
+        required
+        aria-describedby="auth-email-error"
+      />
+      <div class="invalid-feedback" id="auth-email-error" data-error="email"></div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="auth-password">Password</label>
+      <input
+        class="form-control"
+        id="auth-password"
+        name="password"
+        type="password"
+        required
+        aria-describedby="auth-password-error"
+      />
+      <div class="invalid-feedback" id="auth-password-error" data-error="password"></div>
+    </div>
+
+    <div class="mb-3" data-register-only hidden>
+      <label class="form-label" for="auth-confirm">Confirm password</label>
+      <input
+        class="form-control"
+        id="auth-confirm"
+        name="confirm"
+        type="password"
+        autocomplete="new-password"
+        aria-describedby="auth-confirm-error"
+      />
+      <div class="invalid-feedback" id="auth-confirm-error" data-error="confirm"></div>
+    </div>
+
+    <button class="btn btn-primary w-100" type="submit" data-submit>
+      <span class="spinner-border spinner-border-sm me-2" aria-hidden="true" data-spinner hidden></span>
+      <span data-submit-label></span>
+    </button>
+  </form>
+
+  <p class="text-center mt-3 mb-0">
+    <span data-switch-text></span>
+    <a data-switch-link href="/login"></a>
+  </p>
 </section>

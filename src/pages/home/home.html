@@ -1,6 +1,110 @@
-<section class="page-home">
-  <h1 class="h2">Taskboard</h1>
-  <p class="lead">Manage projects, stages and tasks in one place.</p>
-  <a class="btn btn-primary" href="/dashboard">Open dashboard</a>
-  <a class="btn btn-outline-secondary" href="/projects">View projects</a>
-</section>
+<div class="page-home">
+  <section class="home-hero text-center py-5" aria-labelledby="home-title">
+    <p class="home-eyebrow text-primary fw-semibold text-uppercase small mb-2">Project management, simplified</p>
+    <h1 id="home-title" class="display-5 fw-bold mb-3">Organise your work on a simple board</h1>
+    <p class="lead text-body-secondary mx-auto mb-4">
+      Taskboard is a Trello-style app. Create a project, split it into stages such as
+      <em>Not Started</em>, <em>In Progress</em> and <em>Done</em>, and move task cards across the board as work progresses.
+    </p>
+    <div class="d-flex flex-wrap justify-content-center gap-2" data-auth="guest">
+      <a class="btn btn-primary btn-lg" href="/login?mode=register">
+        <i class="bi bi-person-plus me-2" aria-hidden="true"></i>Register
+      </a>
+      <a class="btn btn-outline-secondary btn-lg" href="/login">
+        <i class="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Login
+      </a>
+    </div>
+    <div class="d-flex flex-wrap justify-content-center gap-2" data-auth="user" hidden>
+      <a class="btn btn-primary btn-lg" href="/dashboard">
+        <i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Go to dashboard
+      </a>
+      <a class="btn btn-outline-secondary btn-lg" href="/projects">
+        <i class="bi bi-folder2-open me-2" aria-hidden="true"></i>My projects
+      </a>
+    </div>
+  </section>
+
+  <section class="py-5" aria-labelledby="features-title">
+    <h2 id="features-title" class="h3 text-center mb-4">Everything you need to keep work moving</h2>
+    <ul class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 list-unstyled mb-0">
+      <li class="col">
+        <article class="card feature-card h-100">
+          <div class="card-body">
+            <span class="feature-icon text-primary" aria-hidden="true"><i class="bi bi-folder2"></i></span>
+            <h3 class="h5 card-title mt-3">Projects</h3>
+            <p class="card-text text-body-secondary">Keep each piece of work in its own project with a title and description.</p>
+          </div>
+        </article>
+      </li>
+      <li class="col">
+        <article class="card feature-card h-100">
+          <div class="card-body">
+            <span class="feature-icon text-success" aria-hidden="true"><i class="bi bi-layout-three-columns"></i></span>
+            <h3 class="h5 card-title mt-3">Stages</h3>
+            <p class="card-text text-body-secondary">Every project starts with three stages, and a Done stage marks finished work.</p>
+          </div>
+        </article>
+      </li>
+      <li class="col">
+        <article class="card feature-card h-100">
+          <div class="card-body">
+            <span class="feature-icon text-warning" aria-hidden="true"><i class="bi bi-card-text"></i></span>
+            <h3 class="h5 card-title mt-3">Task cards</h3>
+            <p class="card-text text-body-secondary">Describe tasks with rich text and see at a glance what is open and what is done.</p>
+          </div>
+        </article>
+      </li>
+      <li class="col">
+        <article class="card feature-card h-100">
+          <div class="card-body">
+            <span class="feature-icon text-info" aria-hidden="true"><i class="bi bi-arrows-move"></i></span>
+            <h3 class="h5 card-title mt-3">Drag and drop</h3>
+            <p class="card-text text-body-secondary">Move cards between stages to update their progress in a single gesture.</p>
+          </div>
+        </article>
+      </li>
+    </ul>
+  </section>
+
+  <section class="py-5" aria-labelledby="example-title">
+    <h2 id="example-title" class="h3 text-center mb-1">See how a board looks</h2>
+    <p class="text-center text-body-secondary mb-4">A static illustration with made-up tasks. It is not real data.</p>
+
+    <figure class="example-board border rounded-3 p-3 p-md-4 mb-0">
+      <figcaption class="d-flex align-items-center gap-2 mb-3">
+        <span class="badge text-bg-secondary">Example</span>
+        <span class="fw-semibold">Sample project: Launch a bake sale</span>
+      </figcaption>
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <section class="board-column rounded-3 p-3 h-100" aria-label="Example stage: Not Started">
+            <h3 class="h6 text-uppercase text-body-secondary mb-3">Not Started</h3>
+            <div class="board-card card mb-2"><div class="card-body py-2 px-3">Choose a venue</div></div>
+            <div class="board-card card mb-2"><div class="card-body py-2 px-3">Print posters</div></div>
+          </section>
+        </div>
+        <div class="col-12 col-md-4">
+          <section class="board-column rounded-3 p-3 h-100" aria-label="Example stage: In Progress">
+            <h3 class="h6 text-uppercase text-body-secondary mb-3">In Progress</h3>
+            <div class="board-card card mb-2"><div class="card-body py-2 px-3">Bake test batch</div></div>
+          </section>
+        </div>
+        <div class="col-12 col-md-4">
+          <section class="board-column rounded-3 p-3 h-100" aria-label="Example stage: Done">
+            <h3 class="h6 text-uppercase text-body-secondary mb-3">
+              <i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>Done
+            </h3>
+            <div class="board-card card mb-2"><div class="card-body py-2 px-3 text-decoration-line-through text-body-secondary">Set the date</div></div>
+            <div class="board-card card mb-2"><div class="card-body py-2 px-3 text-decoration-line-through text-body-secondary">Recruit volunteers</div></div>
+          </section>
+        </div>
+      </div>
+    </figure>
+  </section>
+
+  <section class="home-cta text-center rounded-3 p-4 p-md-5 mb-4" aria-labelledby="cta-title" data-auth="guest">
+    <h2 id="cta-title" class="h3 mb-3">Ready to get organised?</h2>
+    <a class="btn btn-primary" href="/login?mode=register">Create your free account</a>
+    <a class="btn btn-link" href="/login">I already have an account</a>
+  </section>
+</div>

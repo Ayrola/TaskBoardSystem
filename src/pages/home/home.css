@@ -1,3 +1,51 @@
 .page-home .lead {
-  max-width: 40rem;
+  max-width: 42rem;
+}
+
+.page-home .home-hero {
+  background: radial-gradient(60rem 20rem at 50% -10%, rgba(var(--bs-primary-rgb), 0.12), transparent 70%);
+}
+
+.feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: var(--bs-tertiary-bg);
+  font-size: 1.5rem;
+}
+
+.feature-card,
+.board-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--bs-box-shadow);
+}
+
+.example-board {
+  background: var(--bs-body-bg);
+}
+
+.board-column {
+  background: var(--bs-tertiary-bg);
+}
+
+.home-cta {
+  background: var(--bs-tertiary-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-card,
+  .board-card {
+    transition: none;
+  }
+
+  .feature-card:hover {
+    transform: none;
+  }
 }

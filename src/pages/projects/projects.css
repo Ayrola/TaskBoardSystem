@@ -1,3 +1,16 @@
-.page-projects {
-  min-height: 12rem;
+.projects-table {
+  min-width: 48rem;
+}
+
+/* Visual truncation only; the full text stays in the DOM and in the title tooltip. */
+.project-description {
+  max-width: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects-table [data-action='delete'][aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
