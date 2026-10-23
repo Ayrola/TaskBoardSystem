@@ -1,95 +1,99 @@
 <section class="page-tasks" aria-labelledby="board-heading" aria-busy="true">
-  <nav aria-label="Breadcrumb" class="mb-2">
-    <a href="/projects" class="link-secondary text-decoration-none small"><i class="bi bi-arrow-left" aria-hidden="true"></i> All projects</a>
-  </nav>
-
-  <div class="board-header d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
-    <div class="min-w-0">
-      <h1 id="board-heading" class="h2 mb-1 text-break" data-heading>Tasks</h1>
-      <p class="text-body-secondary mb-0 board-description" data-project-description hidden></p>
+  <header class="board-header">
+    <div class="board-heading-group">
+      <a href="/projects" class="board-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> Projects</a>
+      <div class="board-eyebrow"><i class="bi bi-kanban" aria-hidden="true"></i> Project board</div>
+      <h1 id="board-heading" tabindex="-1" data-heading>Project board</h1>
+      <div class="board-description-wrap" data-description-wrap hidden>
+        <p id="board-description" class="board-description" data-project-description></p>
+        <button type="button" class="board-text-button" aria-expanded="false" aria-controls="board-description" data-description-toggle hidden>Read more</button>
+      </div>
+      <p class="board-project-stats" data-project-stats></p>
     </div>
-    <div class="d-flex flex-wrap gap-2" data-actions hidden>
-      <a class="btn btn-outline-secondary btn-sm" data-link="activity" href="/activity">Activity</a>
-      <a class="btn btn-outline-secondary btn-sm" data-link="deadlines" href="/deadlines">Deadlines</a>
-      <a class="btn btn-outline-secondary btn-sm" data-link="labels" href="/labels">Labels</a>
-      <a class="btn btn-outline-secondary btn-sm" data-link="edit" href="#"><i class="bi bi-pencil" aria-hidden="true"></i> Edit project</a>
-      <a class="btn btn-outline-secondary btn-sm" data-link="users" href="#"><i class="bi bi-people" aria-hidden="true"></i> Project users</a>
+    <div class="board-header-actions" data-actions hidden>
+      <button type="button" class="btn btn-primary board-primary-add" data-add-primary><i class="bi bi-plus-lg" aria-hidden="true"></i> Add task</button>
+      <button type="button" class="board-icon-button" popovertarget="board-project-menu" aria-label="Project actions" data-menu-trigger><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+      <div id="board-project-menu" class="board-action-menu" popover="auto" role="group" aria-label="Project actions" data-action-menu>
+        <a data-link="activity" href="/activity"><i class="bi bi-clock-history" aria-hidden="true"></i> Activity</a>
+        <a data-link="deadlines" href="/deadlines"><i class="bi bi-calendar3" aria-hidden="true"></i> Deadlines</a>
+        <a data-link="labels" href="/labels"><i class="bi bi-tag" aria-hidden="true"></i> Manage labels</a>
+        <div class="board-menu-divider" data-manager-divider></div>
+        <a data-link="edit" href="#"><i class="bi bi-pencil" aria-hidden="true"></i> Edit project</a>
+        <a data-link="users" href="#"><i class="bi bi-people" aria-hidden="true"></i> Project users</a>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
-    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-    <span>Loading board…</span>
+  <div data-state="loading" class="board-loading" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>Loading your board…</span>
+    <div class="board-skeletons" aria-hidden="true"><span></span><span></span><span></span></div>
   </div>
-
-  <div data-state="notfound" class="card" hidden>
-    <div class="card-body text-center py-5">
-      <i class="bi bi-question-circle display-5 text-body-secondary" aria-hidden="true"></i>
-      <h2 class="h5 mt-3">Project not found</h2>
-      <p class="text-body-secondary mb-3">This project does not exist, or you do not have access to it.</p>
-      <a class="btn btn-primary" href="/projects">Back to projects</a>
-    </div>
+  <div data-state="notfound" class="board-state-card" hidden>
+    <i class="bi bi-lock" aria-hidden="true"></i><h2>Project not found</h2>
+    <p>This project no longer exists, or you do not have access to it.</p><a class="btn btn-primary" href="/projects">Back to projects</a>
   </div>
-
-  <div data-state="error" class="alert alert-danger" role="alert" hidden>
-    <p class="mb-2" data-error-text>Could not load this board.</p>
-    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
+  <div data-state="error" class="board-state-card" role="alert" hidden>
+    <i class="bi bi-exclamation-circle" aria-hidden="true"></i><h2>We couldn’t load this board</h2>
+    <p data-error-text>Please try again.</p><button type="button" class="btn btn-primary" data-retry>Try again</button>
   </div>
 
   <div data-state="board" hidden>
-    <p class="text-body-secondary" data-empty-project hidden>
-      This project has no tasks yet. Tasks you add will appear in the stage columns below.
-    </p>
-    <p class="text-body-secondary" data-no-stages hidden>This project has no stages.</p>
-    <div class="board-status small text-body-secondary d-flex align-items-center gap-2 mb-2" role="status" aria-live="polite">
-      <span class="spinner-border spinner-border-sm" aria-hidden="true" data-saving-spinner hidden></span>
-      <span data-saving-text></span>
-      <span class="ms-auto" data-live-status></span>
+    <div class="board-toolbar" aria-label="Search and filter tasks">
+      <div class="board-toolbar-main">
+        <label class="board-search"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search task titles and descriptions</span><input type="search" maxlength="200" placeholder="Search tasks…" data-search /></label>
+        <button type="button" class="board-filter-toggle" aria-expanded="false" aria-controls="board-filter-controls" data-toggle-filters><i class="bi bi-sliders2" aria-hidden="true"></i> Filters <span data-filter-count hidden></span></button>
+        <span class="board-result-count" role="status" data-result-count></span>
+      </div>
+      <div class="board-filter-controls" id="board-filter-controls" data-filter-controls>
+        <label>Status<select data-filter="status"><option value="">All statuses</option><option value="open">Open</option><option value="completed">Completed</option></select></label>
+        <label>Stage<select data-filter="stage"><option value="">All stages</option></select></label>
+        <label>Label<select data-filter="label"><option value="">All labels</option></select></label>
+        <label>Assignment<select data-filter="assignment"><option value="">Anyone</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select></label>
+        <label>Deadline<select data-filter="due"><option value="">Any deadline</option><option value="overdue">Overdue</option><option value="scheduled">Has deadline</option><option value="none">No deadline</option></select></label>
+      </div>
+      <div class="board-active-filters" data-active-filters hidden><div data-filter-chips></div><button type="button" class="board-text-button" data-clear-filters>Clear filters</button></div>
     </div>
+    <div class="board-status" role="status" aria-live="polite">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true" data-saving-spinner hidden></span><span data-saving-text></span>
+      <span data-filter-status></span><span class="board-live-status is-offline" data-live-status>Connecting live updates…</span>
+    </div>
+    <p class="board-filter-notice" data-drag-notice hidden><i class="bi bi-info-circle" aria-hidden="true"></i> Dragging is paused while filters are active to protect saved ordering. Use a task’s Move action instead.</p>
+    <div class="board-empty-project" data-empty-project hidden><i class="bi bi-inbox" aria-hidden="true"></i><div><strong>A clear board, ready for your next idea.</strong><p>Add your first task to get started.</p></div><button type="button" class="btn btn-primary btn-sm" data-add-empty>Add task</button></div>
+    <div class="board-no-results" data-no-results hidden><i class="bi bi-search" aria-hidden="true"></i><strong>No matching tasks</strong><span>Try a different search or clear your filters.</span><button type="button" class="board-text-button" data-clear-filters>Clear filters</button></div>
+    <p class="board-no-stages" data-no-stages hidden>This project has no stages. A project manager needs to create a stage before tasks can be added.</p>
+    <label class="board-stage-jump">Jump to stage<select data-stage-jump aria-label="Jump to stage"></select></label>
     <div class="board" data-board tabindex="0" role="region" aria-label="Task board. Scroll horizontally to see all stages."></div>
   </div>
 
   <template data-column-template>
     <section class="board-column" role="group">
-      <header class="board-column-header d-flex align-items-center justify-content-between gap-2">
-        <h2 class="h6 mb-0 text-break" data-stage-name></h2>
-        <span class="badge text-bg-secondary rounded-pill" data-stage-count></span>
-      </header>
-      <ul class="board-cards list-unstyled mb-0" data-cards></ul>
-      <p class="board-empty text-body-secondary small mb-0" data-stage-empty hidden>No tasks in this stage.</p>
-      <div class="board-more small text-body-secondary" data-more hidden>
-        <p class="mb-1" data-more-summary></p>
-        <div class="d-flex align-items-center gap-2">
-          <span class="spinner-border spinner-border-sm" aria-hidden="true" data-more-spinner hidden></span>
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-load-more>Load more</button>
-        </div>
-        <p class="text-danger mb-0 mt-1" data-more-error hidden>Could not load more tasks. Try again.</p>
-      </div>
-      <p class="board-end small text-body-secondary text-center mb-0" data-more-end hidden>End of list</p>
-      <button type="button" class="btn btn-outline-secondary board-add" data-add>
-        <i class="bi bi-plus-lg" aria-hidden="true"></i>
-      </button>
+      <header class="board-column-header"><span class="board-stage-dot" aria-hidden="true"></span><h2 data-stage-name></h2><span class="board-stage-count" data-stage-count></span><button type="button" class="board-icon-button" data-add aria-label="Add task"><i class="bi bi-plus-lg" aria-hidden="true"></i></button></header>
+      <div class="board-column-body"><ul class="board-cards" data-cards></ul><div class="board-empty" data-stage-empty hidden><i class="bi bi-plus-square-dotted" aria-hidden="true"></i><span data-column-empty-text>No tasks yet</span><small>Add a task or drop one here.</small></div></div>
+      <footer class="board-column-footer">
+        <div class="board-more" data-more hidden><span data-more-summary></span><div><span class="spinner-border spinner-border-sm" aria-hidden="true" data-more-spinner hidden></span><button type="button" class="board-text-button" data-load-more>Load more</button></div><p class="text-danger" data-more-error hidden>Could not load tasks. Try again.</p></div>
+        <span class="board-end" data-more-end hidden>All tasks loaded</span>
+        <button type="button" class="board-add" data-add><i class="bi bi-plus-lg" aria-hidden="true"></i> Add task</button>
+      </footer>
     </section>
   </template>
-
   <template data-card-template>
-    <li class="card task-card">
-      <div class="card-body p-2">
-        <h3 class="h6 card-title mb-1 text-break">
-          <button type="button" class="task-open btn btn-link p-0 text-start text-reset text-decoration-none fw-semibold stretched-link" data-open-task data-task-title></button>
-        </h3>
-        <p class="card-text small text-body-secondary mb-0 task-excerpt" data-task-excerpt hidden></p>
-        <p class="small text-body-secondary mt-2 mb-0" data-checklist-progress></p>
-        <p class="small mt-2 mb-0" data-deadline hidden></p>
-        <div class="d-flex flex-wrap gap-1 mt-2" data-task-labels aria-label="Task labels"></div>
-        <p class="small text-body-secondary mt-2 mb-0 text-break" data-task-assignees></p>
-        <div class="task-actions d-flex align-items-center justify-content-end gap-1 mt-2">
-          <span class="task-handle me-auto text-body-secondary" data-drag-handle title="Drag to move" aria-hidden="true"><i class="bi bi-grip-vertical"></i></span>
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-task-action="move"><i class="bi bi-arrows-move" aria-hidden="true"></i></button>
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-task-action="view"><i class="bi bi-eye" aria-hidden="true"></i></button>
-          <button type="button" class="btn btn-sm btn-outline-primary" data-task-action="edit"><i class="bi bi-pencil" aria-hidden="true"></i></button>
-          <button type="button" class="btn btn-sm btn-outline-danger" data-task-action="delete"><i class="bi bi-trash" aria-hidden="true"></i></button>
-        </div>
+    <li class="task-card">
+      <div class="task-card-top"><span class="task-completed-marker" data-card-done hidden><i class="bi bi-check2-circle" aria-hidden="true"></i> Completed</span><div class="task-card-tools"><span class="task-handle" data-drag-handle aria-hidden="true" title="Drag to move"><i class="bi bi-grip-vertical"></i></span><button type="button" class="board-icon-button" data-task-menu-trigger aria-label="Task actions"><i class="bi bi-three-dots" aria-hidden="true"></i></button></div></div>
+      <h3><button type="button" class="task-open" data-open-task data-task-title></button></h3>
+      <p class="task-excerpt" data-task-excerpt hidden></p>
+      <div class="task-card-labels" data-task-labels aria-label="Task labels" hidden></div>
+      <div class="task-card-meta" data-card-meta hidden>
+        <span class="task-meta-item" data-checklist-progress hidden><i class="bi bi-check2-square" aria-hidden="true"></i><span></span></span>
+        <span class="task-meta-item" data-attachment-progress hidden><i class="bi bi-paperclip" aria-hidden="true"></i><span></span></span>
+        <span class="task-meta-item" data-comment-progress hidden><i class="bi bi-chat-left" aria-hidden="true"></i><span></span></span>
+        <span class="task-meta-item task-assignees" data-task-assignees hidden><i class="bi bi-person" aria-hidden="true"></i><span></span></span>
+      </div>
+      <p class="task-deadline" data-deadline hidden></p>
+      <div class="board-action-menu" popover="auto" role="group" aria-label="Task actions" data-action-menu data-card-menu>
+        <button type="button" data-task-action="view"><i class="bi bi-arrow-up-right-square" aria-hidden="true"></i> Open task</button>
+        <button type="button" data-task-action="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit task</button>
+        <button type="button" data-task-action="move"><i class="bi bi-arrows-move" aria-hidden="true"></i> Move task</button>
+        <div class="board-menu-divider"></div><button type="button" class="board-danger-action" data-task-action="delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete task</button>
       </div>
     </li>
   </template>

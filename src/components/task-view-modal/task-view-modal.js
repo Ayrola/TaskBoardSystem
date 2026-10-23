@@ -1,3 +1,4 @@
+import '../task-dialog.css';
 import { setupTaskChecklist } from './task-checklist.js';
 import { renderTaskDeadline } from '../../utils/deadlines.js';
 import { setupTaskLabels } from './task-labels.js';

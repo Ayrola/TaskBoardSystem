@@ -1,3 +1,4 @@
+import { EMPTY_BOARD_FILTERS, hasBoardFilters, matchesBoardTask } from '../../utils/board-filters.js';
 import { renderTaskDeadline } from '../../utils/deadlines.js';
 import { labelBadge } from '../../utils/labels.js';
 import Sortable from 'sortablejs';
@@ -30,6 +31,19 @@ export function mount(container, ctx) {
   const columnTemplate = root.querySelector('[data-column-template]');
   const cardTemplate = root.querySelector('[data-card-template]');
   const actions = root.querySelector('[data-actions]');
+  const filters = { ...EMPTY_BOARD_FILTERS };
+  let filterTimer = 0;
+  let filterLoading = false;
+  let loadController = null;
+  const searchInput = root.querySelector('[data-search]');
+  const filterStatus = root.querySelector('[data-filter-status]');
+  const descriptionCache = new WeakMap();
+  const filtered = () => hasBoardFilters(filters);
+  const plainDescription = (task) => {
+    if (!descriptionCache.has(task)) descriptionCache.set(task, htmlToExcerpt(task.description, Infinity));
+    return descriptionCache.get(task);
+  };
+  const visibleTasks = (stage) => stage.tasks.filter(task => matchesBoardTask(task, stage.id, filters, plainDescription(task)));
   let requestId = 0;
   let linkedTaskOpened = false;
   // Bumped whenever cursors may have become invalid (a reload starts, a move, a realtime change). A page
@@ -55,7 +69,7 @@ export function mount(container, ctx) {
     savingText.textContent = active ? 'Saving move…' : '';
     board.classList.toggle('is-saving', active);
     board.setAttribute('aria-busy', String(active));
-    for (const sortable of sortables) sortable.option('disabled', active);
+    for (const sortable of sortables) sortable.option('disabled', active || filtered() || activeLoads > 0);
   }
 
   function destroySortables() {
@@ -76,18 +90,32 @@ export function mount(container, ctx) {
         chosenClass: 'task-chosen',
         emptyInsertThreshold: 24,
         forceFallback: false,
-        disabled: moving,
+        disabled: moving || filtered() || activeLoads > 0,
+        dragClass: 'task-dragging',
+        delayOnTouchOnly: true,
+        delay: 160,
+        touchStartThreshold: 5,
+        onMove: (event) => {
+          board.querySelectorAll('.is-drop-target').forEach(column => column.classList.remove('is-drop-target'));
+          event.to.closest('.board-column')?.classList.add('is-drop-target');
+          return !filtered() && !moving && activeLoads === 0;
+        },
         onStart: () => {
           dragging = true;
+          boardEpoch += 1;
+          pendingRefresh = pendingRefresh || Boolean(data?.stages.some(stage => stage.loadingMore));
           board.classList.add('is-dragging');
+          list.closest('.board-column')?.classList.add('is-drop-target');
         },
         onEnd: (event) => {
           dragging = false;
           board.classList.remove('is-dragging');
+          board.querySelectorAll('.is-drop-target').forEach(column => column.classList.remove('is-drop-target'));
           if (event.from === event.to && event.oldIndex === event.newIndex) {
             flushPending();
             return;
           }
+          if (filtered()) { load({ quiet: true }); return; }
           const stageId = event.to.closest('.board-column')?.dataset.stageId;
           // The anchor is the card now directly above the drop; null means the top of the column. A drop below
           // the last LOADED card lands right after it, ahead of every unloaded task.
@@ -103,27 +131,164 @@ export function mount(container, ctx) {
     root.setAttribute('aria-busy', String(state === 'loading'));
   };
 
+  function fillFilterOptions(select, rows, placeholder, label, selected = select.value) {
+    const options = placeholder === null ? [] : [new Option(placeholder, '')];
+    options.push(...rows.map(row => new Option(label(row), row.id)));
+    if (selected && !rows.some(row => row.id === selected)) options.push(new Option('No longer available', selected));
+    select.replaceChildren(...options);
+    if (selected) select.value = selected;
+  }
+
+  function sizeBoard() {
+    if (ctx.signal.aborted) return;
+    const description = root.querySelector('[data-project-description]');
+    const expanded = description.classList.contains('is-expanded');
+    root.querySelector('[data-description-toggle]').hidden = !expanded && description.scrollHeight <= description.clientHeight + 1;
+    const height = Math.max(320, Math.min(840, window.innerHeight - Math.max(0, board.getBoundingClientRect().top) - 30));
+    root.style.setProperty('--board-column-height', `${height}px`);
+  }
+
+  function closeMenus() {
+    for (const menu of root.querySelectorAll('[data-action-menu]')) {
+      if (menu.matches(':popover-open')) menu.hidePopover();
+    }
+  }
+
+  function updateToolbar() {
+    const active = filtered(); root.classList.toggle('is-filtered', active);
+    root.querySelector('[data-drag-notice]').hidden = !active;
+    const chips = root.querySelector('[data-filter-chips]'); chips.replaceChildren();
+    for (const [key, value] of Object.entries(filters)) {
+      if (!value.trim()) continue;
+      const chip = document.createElement('span'); chip.className = 'board-filter-chip';
+      const select = root.querySelector(`[data-filter="${key}"]`);
+      const label = key === 'search' ? `Search: ${value}` : `${key[0].toUpperCase()+key.slice(1)}: ${select?.selectedOptions[0]?.textContent ?? value}`;
+      chip.append(document.createTextNode(label));
+      const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×';
+      remove.dataset.clearFilter = key; remove.setAttribute('aria-label', `Remove ${label}`); chip.append(remove); chips.append(chip);
+    }
+    root.querySelector('[data-active-filters]').hidden = !active;
+    const count = Object.values(filters).filter(value => value.trim()).length;
+    const badge = root.querySelector('[data-filter-count]'); badge.textContent = count; badge.hidden = !count;
+    const total = data?.stages.reduce((sum, stage) => sum + stage.taskCount, 0) ?? 0;
+    const shown = data?.stages.reduce((sum, stage) => sum + visibleTasks(stage).length, 0) ?? 0;
+    setText(root, '[data-result-count]', filterLoading ? 'Searching all tasks…' : active ? `${shown} of ${total} tasks` : `${total} tasks`);
+    filterStatus.textContent = filterLoading ? 'Searching all tasks…' : '';
+    root.querySelector('[data-no-results]').hidden = !active || shown > 0 || total === 0 || filterLoading;
+    for (const sortable of sortables) sortable.option('disabled', moving || active || activeLoads > 0);
+  }
+
+  function applyFilters() {
+    if (!data || ctx.signal.aborted) return;
+    if (isBusy()) { pendingRefresh = true; return; }
+    filterLoading = filtered() && data.stages.some(stage => stage.hasMore);
+    render(data);
+    if (filterLoading || activeLoads > 0) load({ quiet: true });
+  }
+
+  function setupToolbar() {
+    ctx.cleanup.listen(searchInput, 'input', () => {
+      filters.search = searchInput.value.trim();
+      clearTimeout(filterTimer); filterTimer = setTimeout(applyFilters, 220);
+      // Lock ordering immediately, before the debounced render.
+      for (const sortable of sortables) sortable.option('disabled', moving || filtered() || activeLoads > 0);
+    });
+    ctx.cleanup.listen(root.querySelector('[data-filter-controls]'), 'change', event => {
+      if (!event.target.dataset.filter) return;
+      filters[event.target.dataset.filter] = event.target.value;
+      clearTimeout(filterTimer); applyFilters();
+    });
+    ctx.cleanup.listen(root, 'click', event => {
+      const clear = event.target.closest('[data-clear-filters]');
+      const chip = event.target.closest('[data-clear-filter]');
+      if (clear || chip) {
+        clearTimeout(filterTimer);
+        if (clear) Object.assign(filters, EMPTY_BOARD_FILTERS); else filters[chip.dataset.clearFilter] = '';
+        searchInput.value = filters.search;
+        for (const select of root.querySelectorAll('[data-filter]')) select.value = filters[select.dataset.filter];
+        applyFilters(); searchInput.focus();
+      }
+    });
+    ctx.cleanup.listen(root.querySelector('[data-toggle-filters]'), 'click', event => {
+      const button = event.currentTarget; const open = button.getAttribute('aria-expanded') !== 'true';
+      button.setAttribute('aria-expanded', String(open)); root.querySelector('[data-filter-controls]').classList.toggle('is-open', open); sizeBoard();
+    });
+    ctx.cleanup.listen(root.querySelector('[data-description-toggle]'), 'click', event => {
+      const button = event.currentTarget; const expanded = button.getAttribute('aria-expanded') !== 'true';
+      button.setAttribute('aria-expanded', String(expanded)); button.textContent = expanded ? 'Show less' : 'Read more';
+      root.querySelector('[data-project-description]').classList.toggle('is-expanded', expanded); sizeBoard();
+    });
+    const primaryAdd = () => {
+      if (!data?.stages.length) return;
+      const stage = data.stages.find(stage => stage.id === filters.stage) ?? data.stages.find(stage => !stage.isDone) ?? data.stages[0];
+      runFlow(() => addTask(stage.id), { stageId: stage.id });
+    };
+    ctx.cleanup.listen(root.querySelector('[data-add-primary]'), 'click', primaryAdd);
+    ctx.cleanup.listen(root.querySelector('[data-add-empty]'), 'click', primaryAdd);
+    ctx.cleanup.listen(root.querySelector('[data-stage-jump]'), 'change', event => {
+      const column = columnFor(event.target.value);
+      if (column) board.scrollTo({ left: column.offsetLeft - board.offsetLeft, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+    });
+    ctx.cleanup.listen(root, 'beforetoggle', event => {
+      const menu = event.target;
+      if (!menu.matches('[data-action-menu]') || event.newState !== 'open') return;
+      const trigger = root.querySelector(`[popovertarget="${CSS.escape(menu.id)}"]`);
+      const rect = trigger.getBoundingClientRect();
+      menu.style.left = `${Math.max(8, Math.min(window.innerWidth - 208, rect.right - 200))}px`;
+      menu.style.top = `${Math.max(8, Math.min(rect.bottom + 5, window.innerHeight - (menu.id === 'board-project-menu' ? 246 : 190)))}px`;
+    }, true);
+    ctx.cleanup.listen(root, 'toggle', event => {
+      const menu = event.target;
+      if (!menu.matches('[data-action-menu]')) return;
+      root.querySelector(`[popovertarget="${CSS.escape(menu.id)}"]`)?.setAttribute('aria-expanded', String(event.newState === 'open'));
+      if (event.newState === 'open') menu.querySelector('button, a')?.focus();
+    }, true);
+    ctx.cleanup.listen(root, 'keydown', event => {
+      const menu = event.target.closest('[data-action-menu]');
+      if (!menu || !['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+      const items = [...menu.querySelectorAll('button, a')].filter(item => !item.hidden && !item.disabled);
+      const index = items.indexOf(document.activeElement);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length-1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      event.preventDefault(); items[next]?.focus();
+    });
+    ctx.cleanup.listen(window, 'resize', () => { closeMenus(); sizeBoard(); });
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(sizeBoard);
+      observer.observe(root.querySelector('.board-header')); observer.observe(root.querySelector('.board-toolbar'));
+      ctx.cleanup.add(() => observer.disconnect());
+    }
+  }
+
   function buildCard(task) {
     const card = cardTemplate.content.firstElementChild.cloneNode(true);
     card.dataset.taskId = task.id;
     setText(card, '[data-task-title]', task.title);
-    setText(card, '[data-checklist-progress]', task.checklist?.total
-      ? `Checklist: ${task.checklist.completed}/${task.checklist.total} complete` : 'No checklist items');
+    card.querySelector('[data-card-done]').hidden = !task.done;
     renderTaskDeadline(card.querySelector('[data-deadline]'), task);
-    card.querySelector('[data-task-labels]').append(...(task.labels ?? []).map(labelBadge));
-    setText(card, '[data-task-assignees]', task.assignees?.length
-      ? `Assigned: ${task.assignees.map((a) => a.label).join(', ')}` : 'Unassigned');
-    const excerpt = htmlToExcerpt(task.description);
-    if (excerpt) {
-      const element = setText(card, '[data-task-excerpt]', excerpt);
-      element.hidden = false;
+    const labels = card.querySelector('[data-task-labels]');
+    labels.append(...(task.labels ?? []).map(labelBadge)); labels.hidden = !task.labels?.length;
+    const excerpt = htmlToExcerpt(task.description, 180);
+    if (excerpt) { setText(card, '[data-task-excerpt]', excerpt).hidden = false; }
+    const showMeta = (selector, text, accessibleName) => {
+      const item = card.querySelector(selector); item.hidden = false;
+      item.querySelector('span').textContent = text;
+      item.setAttribute('aria-label', accessibleName); item.title = accessibleName;
+    };
+    if (task.checklist?.total) showMeta('[data-checklist-progress]', `${task.checklist.completed}/${task.checklist.total}`, `${task.checklist.completed} of ${task.checklist.total} checklist items complete`);
+    if (task.attachmentCount) showMeta('[data-attachment-progress]', task.attachmentCount, `${task.attachmentCount} attachments`);
+    if (task.commentCount) showMeta('[data-comment-progress]', task.commentCount, `${task.commentCount} comments`);
+    if (task.assignees?.length) {
+      const names = task.assignees.map(a => a.label).join(', ');
+      showMeta('[data-task-assignees]', task.assignees.length === 1 ? task.assignees[0].label : `${task.assignees.length} people`, `Assigned to ${names}`);
     }
+    card.querySelector('[data-card-meta]').hidden = ![...card.querySelectorAll('.task-meta-item')].some(item => !item.hidden);
+    const menu = card.querySelector('[data-card-menu]'); menu.id = `task-menu-${task.id}`;
+    const trigger = card.querySelector('[data-task-menu-trigger]');
+    trigger.setAttribute('popovertarget', menu.id); trigger.setAttribute('aria-label', `Actions for ${task.title}`);
+    card.querySelector('[data-open-task]').setAttribute('aria-label', `Open task: ${task.title}`);
     for (const button of card.querySelectorAll('[data-task-action]')) {
-      const label = `${button.dataset.taskAction[0].toUpperCase()}${button.dataset.taskAction.slice(1)} task: ${task.title}`;
-      button.setAttribute('aria-label', label);
-      button.title = `${button.dataset.taskAction[0].toUpperCase()}${button.dataset.taskAction.slice(1)} task`;
+      button.setAttribute('aria-label', `${button.dataset.taskAction} task: ${task.title}`);
     }
-    if (task.done) card.classList.add('border-success');
     return card;
   }
 
@@ -134,20 +299,23 @@ export function mount(container, ctx) {
     heading.id = `stage-${stage.id}`;
     column.setAttribute('aria-labelledby', heading.id);
 
-    const count = setText(column, '[data-stage-count]', stage.taskCount.toLocaleString());
+    const visible = visibleTasks(stage);
+    const count = setText(column, '[data-stage-count]', filtered() ? `${visible.length} / ${stage.taskCount}` : stage.taskCount.toLocaleString());
     count.setAttribute('aria-label', `${stage.taskCount} ${stage.taskCount === 1 ? 'task' : 'tasks'}`);
     if (stage.isDone) {
-      count.className = 'badge text-bg-success rounded-pill';
       column.classList.add('is-done');
     }
 
-    column.querySelector('[data-cards]').append(...stage.tasks.map(buildCard));
-    column.querySelector('[data-stage-empty]').hidden = stage.taskCount > 0;
+    column.querySelector('[data-cards]').append(...visible.map(buildCard));
+    column.querySelector('[data-stage-empty]').hidden = visible.length > 0;
+    setText(column, '[data-column-empty-text]', filtered() ? 'No matching tasks' : 'No tasks yet');
+    column.querySelector('[data-stage-empty] small').textContent = filtered() ? 'Try adjusting your filters.' : 'Add a task or drop one here.';
     updateColumnFooter(column, stage);
 
-    const add = column.querySelector('[data-add]');
-    add.setAttribute('aria-label', `Add task to ${stage.name}`);
-    add.title = `Add task to ${stage.name}`;
+    for (const add of column.querySelectorAll('[data-add]')) {
+      add.setAttribute('aria-label', `Add task to ${stage.name}`);
+      add.title = `Add task to ${stage.name}`;
+    }
     return column;
   }
 
@@ -155,8 +323,8 @@ export function mount(container, ctx) {
   function updateColumnFooter(column, stage) {
     const more = column.querySelector('[data-more]');
     const end = column.querySelector('[data-more-end]');
-    more.hidden = !stage.hasMore;
-    end.hidden = stage.hasMore || stage.tasks.length <= BOARD_PAGE_SIZE;
+    more.hidden = !stage.hasMore || filtered();
+    end.hidden = filtered() || stage.hasMore || stage.tasks.length <= BOARD_PAGE_SIZE;
     if (!stage.hasMore) return;
     setText(more, '[data-more-summary]', `Showing ${stage.tasks.length.toLocaleString()} of ${stage.taskCount.toLocaleString()} tasks`);
     more.querySelector('[data-more-spinner]').hidden = !stage.loadingMore;
@@ -172,7 +340,7 @@ export function mount(container, ctx) {
   // the board was invalidated or re-rendered meanwhile, and ids already present are never added twice.
   async function loadMore(stageId) {
     const stage = data?.stages.find((candidate) => candidate.id === stageId);
-    if (!stage || !stage.hasMore || stage.loadingMore || activeLoads > 0 || isBusy() || ctx.signal.aborted) return;
+    if (filtered() || !stage || !stage.hasMore || stage.loadingMore || activeLoads > 0 || isBusy() || ctx.signal.aborted) return;
 
     const epoch = boardEpoch;
     stage.loadingMore = true;
@@ -206,15 +374,28 @@ export function mount(container, ctx) {
     column.querySelector('[data-cards]').append(...fresh.map(buildCard));
     setText(column, '[data-stage-count]', stage.taskCount.toLocaleString());
     updateColumnFooter(column, stage);
+    updateToolbar();
     // Overlap means the column moved under us; settle on a fresh snapshot.
     if (fresh.length !== result.tasks.length) scheduleRefresh();
   }
 
-  function render({ project, stages }) {
+  function render({ project, stages, labels }) {
     const id = encodeURIComponent(project.id);
     setText(root, '[data-heading]', project.title);
     const description = setText(root, '[data-project-description]', project.description);
-    description.hidden = !project.description;
+    root.querySelector('[data-description-wrap]').hidden = !project.description;
+    root.querySelector('[data-description-toggle]').hidden = project.description.length < 150 && !project.description.includes('\n');
+    root.querySelector('[data-manager-divider]').hidden = !project.canManage;
+    root.querySelector('[data-link="labels"]').lastChild.textContent = project.canManage ? ' Manage labels' : ' Labels';
+    root.querySelector('[data-add-primary]').disabled = stages.length === 0;
+    root.querySelector('[data-add-empty]').disabled = stages.length === 0;
+    const taskTotal = stages.reduce((sum, stage) => sum + stage.taskCount, 0);
+    const completedTotal = stages.filter(stage => stage.isDone).reduce((sum, stage) => sum + stage.taskCount, 0);
+    setText(root, '[data-project-stats]', `${taskTotal} tasks · ${completedTotal} completed · ${stages.length} stages`);
+    fillFilterOptions(root.querySelector('[data-filter="stage"]'), stages, 'All stages', stage => stage.name, filters.stage);
+    fillFilterOptions(root.querySelector('[data-filter="label"]'), labels ?? [], 'All labels', label => label.name, filters.label);
+    fillFilterOptions(root.querySelector('[data-stage-jump]'), stages, null, stage => stage.name);
+
     root.querySelector('[data-link="edit"]').hidden = !project.canManage;
     root.querySelector('[data-link="users"]').hidden = !project.canManage;
     root.querySelector('[data-link="activity"]').href = `/activity?project=${id}`;
@@ -240,6 +421,8 @@ export function mount(container, ctx) {
     destroySortables();
     board.replaceChildren(...stages.map(buildColumn));
     initSortables();
+    updateToolbar();
+    requestAnimationFrame(sizeBoard);
 
     for (const column of board.querySelectorAll('.board-column')) {
       const top = scrollTops.get(column.dataset.stageId);
@@ -251,19 +434,28 @@ export function mount(container, ctx) {
   // A reload re-reads every column from the top down to the depth currently shown (plus `boost` rows for a column
   // that just received a task), so every cursor is replaced by one taken from the same fresh snapshot.
   async function load({ quiet = false, boost } = {}) {
+    loadController?.abort();
+    const controller = new AbortController(); loadController = controller;
+    const abortLoad = () => controller.abort();
+    ctx.signal.addEventListener('abort', abortLoad, { once: true });
     const current = ++requestId;
+    closeMenus();
     boardEpoch += 1;
     pendingRefresh = false; // this load already reads the newest state
     if (!quiet) show('loading');
+    else { root.setAttribute('aria-busy', 'true'); if (!moving) filterStatus.textContent = filtered() ? 'Searching all tasks…' : 'Updating board…'; }
     const depths = data
       ? new Map(data.stages.map((stage) => [stage.id, stage.tasks.length + (boost?.get(stage.id) ?? 0)]))
       : undefined;
     activeLoads += 1;
     try {
-      const loaded = await getBoard(params.id, { signal: ctx.signal, depths });
+      const loaded = await getBoard(params.id, { signal: controller.signal, depths, complete: filtered(), onProgress: (count) => {
+        if (current === requestId && filtered() && !ctx.signal.aborted) filterStatus.textContent = `Searching all tasks… ${count} checked`;
+      } });
       // Ignore answers that belong to an older request or to a previously opened project.
-      if (current !== requestId || ctx.signal.aborted || loaded.project.id !== params.id) return;
+      if (current !== requestId || ctx.signal.aborted || controller.signal.aborted || loaded.project.id !== params.id) return;
       data = loaded;
+      filterLoading = false;
       render(loaded);
       show('board');
       if (ctx.query.task && !linkedTaskOpened) {
@@ -271,7 +463,8 @@ export function mount(container, ctx) {
         openLinkedTask(ctx.query.task);
       }
     } catch (error) {
-      if (current !== requestId || ctx.signal.aborted) return;
+      if (current !== requestId || ctx.signal.aborted || controller.signal.aborted) return;
+      filterLoading = false;
       data = null;
       actions.hidden = true;
       if (error instanceof ProjectNotFoundError) {
@@ -282,6 +475,9 @@ export function mount(container, ctx) {
       }
     } finally {
       activeLoads -= 1;
+      if (current === requestId && !ctx.signal.aborted) root.setAttribute('aria-busy', 'false');
+      ctx.signal.removeEventListener('abort', abortLoad);
+      if (!ctx.signal.aborted) for (const sortable of sortables) sortable.option('disabled', moving || filtered() || activeLoads > 0);
     }
   }
 
@@ -330,7 +526,9 @@ export function mount(container, ctx) {
   }
 
   function setLive(online) {
-    root.querySelector('[data-live-status]').textContent = online ? '' : 'Live updates paused. Reconnecting…';
+    const status = root.querySelector('[data-live-status]');
+    status.textContent = online ? 'Live updates connected' : 'Live updates paused · reconnecting';
+    status.classList.toggle('is-offline', !online);
   }
 
   async function runDialog(open) {
@@ -349,6 +547,8 @@ export function mount(container, ctx) {
     let changed = false;
     try {
       changed = await flow();
+    } catch (error) {
+      if (!ctx.signal.aborted) showError(error.message || 'Could not complete this action.');
     } finally {
       flowActive = false;
     }
@@ -367,7 +567,7 @@ export function mount(container, ctx) {
     const selector = taskId
       ? `[data-task-id="${CSS.escape(taskId)}"] [data-open-task]`
       : `[data-stage-id="${CSS.escape(stageId ?? '')}"] [data-add]`;
-    const target = root.querySelector(selector) ?? root.querySelector('h1');
+    const target = root.querySelector(selector) ?? root.querySelector('[data-add-primary]') ?? root.querySelector('h1');
     target?.focus();
   }
 
@@ -550,6 +750,7 @@ export function mount(container, ctx) {
     }
     const action = event.target.closest('[data-task-action]');
     if (action) {
+      closeMenus();
       const taskId = action.closest('.task-card').dataset.taskId;
       const kind = action.dataset.taskAction;
       if (kind === 'move') {
@@ -566,13 +767,18 @@ export function mount(container, ctx) {
     }
     const open = event.target.closest('[data-open-task]');
     if (open) {
+      closeMenus();
       const taskId = open.closest('.task-card').dataset.taskId;
       runFlow(() => viewTask(taskId), { taskId });
     }
   });
   ctx.cleanup.listen(root.querySelector('[data-retry]'), 'click', () => load());
+  setupToolbar();
   ctx.cleanup.add(() => activeDialog?.destroy());
   ctx.cleanup.add(destroySortables);
+  ctx.cleanup.add(() => loadController?.abort());
+  ctx.cleanup.add(() => clearTimeout(filterTimer));
+  ctx.cleanup.add(closeMenus);
   ctx.cleanup.add(() => clearTimeout(refreshTimer));
 
   // Subscribe only while this page is mounted. After every (re)join a fresh load closes any gap.
@@ -580,6 +786,7 @@ export function mount(container, ctx) {
     onNotify: (kind) => {
       if (ctx.signal.aborted) return;
       boardEpoch += 1; // invalidate in-flight pages immediately, even if the reload itself is deferred
+      if (activeLoads > 0) loadController?.abort();
       if (kind === 'access') checkAccess();
       scheduleRefresh();
     },

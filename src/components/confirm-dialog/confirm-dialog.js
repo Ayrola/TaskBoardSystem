@@ -43,6 +43,8 @@ export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete'
   const errorBox = element.querySelector('[data-dialog-error]');
   const modal = new Modal(element, { backdrop: 'static' });
   let busy = false;
+  let modalShown = false;
+  let pendingHide = false;
   let confirmed = false;
   let destroyed = false;
   let destroy = () => {};
@@ -58,9 +60,14 @@ export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete'
     // Escape and the close button are ignored while the request is running.
     element.addEventListener('hide.bs.modal', (event) => {
       if (busy) event.preventDefault();
+      else modalShown = false;
     });
     element.addEventListener('hidden.bs.modal', finish);
-    element.addEventListener('shown.bs.modal', () => element.querySelector('[data-dialog-cancel]')?.focus());
+    element.addEventListener('shown.bs.modal', () => {
+      modalShown = true;
+      if (pendingHide) modal.hide();
+      else element.querySelector('[data-dialog-cancel]')?.focus();
+    });
 
     confirmButton.addEventListener('click', async () => {
       if (busy || (requireText && typedInput.value !== requireText.value)) return;
@@ -81,7 +88,8 @@ export function openConfirmDialog({ title, lead, detail, confirmLabel = 'Delete'
         await onConfirm(select.value || null);
         confirmed = true;
         busy = false;
-        modal.hide();
+        pendingHide = true;
+        if (modalShown) modal.hide();
       } catch (error) {
         busy = false;
         errorBox.textContent = error?.message || 'Something went wrong. Please try again.';

@@ -1,3 +1,4 @@
+import '../task-dialog.css';
 import { browserTimezone, toLocalDeadlineInput, deadlineFromEditor } from '../../utils/deadlines.js';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';

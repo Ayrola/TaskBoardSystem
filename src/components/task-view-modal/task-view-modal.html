@@ -2,19 +2,24 @@
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title h5 text-break" id="task-view-title" data-task-title></h2>
+        <div class="min-w-0"><p class="task-dialog-eyebrow">Task details</p><h2 class="modal-title h5 text-break" id="task-view-title" data-task-title></h2></div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div class="task-detail-layout">
+          <div class="task-detail-main">
+            <section class="task-overview" aria-label="Task overview">
         <p class="mb-3">
           <span class="badge text-bg-secondary" data-stage-badge></span>
           <span class="badge text-bg-success" data-done-badge hidden><i class="bi bi-check-circle" aria-hidden="true"></i> Done</span>
         </p>
         <p class="small" data-deadline hidden></p>
         <p class="small"><a data-task-activity href="/activity">View task activity</a></p>
+        <h3 class="h6 task-description-heading">Description</h3>
         <div class="task-description" data-description></div>
         <p class="text-body-secondary fst-italic mb-0" data-no-description hidden>No description.</p>
 
+            </section>
         <section class="mt-4" aria-labelledby="task-checklist-heading" data-task-checklist>
           <h3 class="h6" id="task-checklist-heading">Checklist</h3>
           <p class="small mb-1" data-checklist-summary aria-live="polite"></p>
@@ -33,27 +38,6 @@
             <p class="form-text" id="task-checklist-help">Plain text, up to 500 characters. Use the arrow buttons to reorder items.</p>
           </form>
         </section>
-        <section class="mt-4" aria-labelledby="task-labels-heading" data-task-labels>
-          <h3 class="h6" id="task-labels-heading">Labels</h3>
-          <label class="form-label small" for="task-label-search">Find project labels</label>
-          <input type="search" class="form-control mb-2" id="task-label-search" maxlength="60" disabled />
-          <p class="small text-body-secondary">Select a checkbox to add a label; clear it to remove the label.</p>
-          <div role="alert" class="alert alert-danger py-2 small" hidden></div>
-          <p role="status" class="small text-body-secondary">Loading labels…</p>
-          <div data-label-list></div>
-        </section>
-        <section class="mt-4" aria-labelledby="task-assignees-heading">
-          <h3 class="h6" id="task-assignees-heading">Assignees</h3>
-          <ul class="list-group mb-2" data-assignee-list aria-label="Current assignees"></ul>
-          <p class="small text-body-secondary" data-assignee-empty>Loading assignees...</p>
-          <label class="form-label small" for="task-assignee-search">Assign project participants</label>
-          <input type="search" class="form-control" id="task-assignee-search" data-assignee-search placeholder="Search by name or email" maxlength="100" />
-          <p class="form-text">Project owner and current members only. Up to 50 matches; type to narrow the search.</p>
-          <div class="alert alert-danger py-2 small" role="alert" data-assignee-error hidden></div>
-          <p class="small text-body-secondary" role="status" data-assignee-status></p>
-          <ul class="list-group" data-assignee-results aria-label="Available project participants"></ul>
-        </section>
-
         <section class="attachments mt-4" aria-labelledby="task-attachments-heading">
           <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
             <h3 class="h6 mb-0" id="task-attachments-heading">
@@ -102,13 +86,38 @@
           <p class="small text-body-secondary text-center mt-2 mb-0" data-comment-end hidden>No older comments.</p>
         </section>
 
+          </div>
+          <aside class="task-detail-sidebar" aria-label="Task properties">
+        <section class="mt-4" aria-labelledby="task-labels-heading" data-task-labels>
+          <h3 class="h6" id="task-labels-heading">Labels</h3>
+          <label class="form-label small" for="task-label-search">Find project labels</label>
+          <input type="search" class="form-control mb-2" id="task-label-search" maxlength="60" disabled />
+          <p class="small text-body-secondary">Select a checkbox to add a label; clear it to remove the label.</p>
+          <div role="alert" class="alert alert-danger py-2 small" hidden></div>
+          <p role="status" class="small text-body-secondary">Loading labels…</p>
+          <div data-label-list></div>
+        </section>
+        <section class="mt-4" aria-labelledby="task-assignees-heading">
+          <h3 class="h6" id="task-assignees-heading">Assignees</h3>
+          <ul class="list-group mb-2" data-assignee-list aria-label="Current assignees"></ul>
+          <p class="small text-body-secondary" data-assignee-empty>Loading assignees...</p>
+          <label class="form-label small" for="task-assignee-search">Assign project participants</label>
+          <input type="search" class="form-control" id="task-assignee-search" data-assignee-search placeholder="Search by name or email" maxlength="100" />
+          <p class="form-text">Project owner and current members only. Up to 50 matches; type to narrow the search.</p>
+          <div class="alert alert-danger py-2 small" role="alert" data-assignee-error hidden></div>
+          <p class="small text-body-secondary" role="status" data-assignee-status></p>
+          <ul class="list-group" data-assignee-results aria-label="Available project participants"></ul>
+        </section>
+
         <dl class="small text-body-secondary mt-4 mb-0 task-meta">
           <div><dt class="d-inline">Created:</dt> <dd class="d-inline" data-created></dd></div>
           <div data-updated-row><dt class="d-inline">Updated:</dt> <dd class="d-inline" data-updated></dd></div>
         </dl>
+          </aside>
+        </div>
       </div>
       <div class="modal-footer justify-content-between">
-        <button type="button" class="btn btn-outline-danger" data-action="delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+        <button type="button" class="btn btn-outline-danger" data-action="delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete task</button>
         <div class="d-flex gap-2">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
           <button type="button" class="btn btn-primary" data-action="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</button>

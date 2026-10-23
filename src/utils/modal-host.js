@@ -21,6 +21,8 @@ export function mountModal(html, { backdrop = true, dismissedValue = null, onRel
   const { signal } = listeners;
   let outcome = dismissedValue;
   let released = false;
+  let shown = false;
+  let pendingClose = false;
   let canClose = () => true;
   let resolveResult;
   const result = new Promise((resolve) => { resolveResult = resolve; });
@@ -33,8 +35,14 @@ export function mountModal(html, { backdrop = true, dismissedValue = null, onRel
     return true;
   }
 
+  element.addEventListener('shown.bs.modal', () => {
+    shown = true;
+    // A fast successful request may finish during Bootstrap's opening transition.
+    if (pendingClose && !released) modal.hide();
+  }, { signal });
   element.addEventListener('hide.bs.modal', (event) => {
     if (!canClose()) event.preventDefault();
+    else shown = false;
   }, { signal });
 
   // 'hidden' fires after the hide transition, so disposing here is safe.
@@ -54,7 +62,8 @@ export function mountModal(html, { backdrop = true, dismissedValue = null, onRel
     close(value) {
       outcome = value;
       canClose = () => true;
-      modal.hide();
+      pendingClose = true;
+      if (shown) modal.hide();
     },
     destroy() {
       if (!release()) return;

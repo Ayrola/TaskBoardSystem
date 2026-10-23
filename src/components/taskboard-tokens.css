@@ -1,0 +1,7 @@
+/* Shared tokens are scoped to board and task surfaces. */
+.page-tasks, .task-view-modal, .task-form-modal, .move-task-modal {
+  --tb-ink: #202b3c; --tb-muted: #596579; --tb-line: #dce2ea; --tb-surface: #fff;
+  --tb-canvas: #f5f7fa; --tb-accent: #405ad4; --tb-accent-soft: #eef1ff;
+  --tb-radius: 12px; --tb-space: 8px; --tb-shadow: 0 2px 6px #172b4d08;
+  color: var(--tb-ink);
+}

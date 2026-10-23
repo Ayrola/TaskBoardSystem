@@ -1,3 +1,4 @@
+import '../task-dialog.css';
 import html from './move-task-modal.html?raw';
 import { mountModal } from '../../utils/modal-host.js';
 import { setText } from '../../utils/render.js';
@@ -45,7 +46,8 @@ export function openMoveTaskModal({ task, stages }) {
   }
 
   const originalStage = stageOf(task.stageId);
-  const originalIndex = Math.max(0, originalStage?.tasks.findIndex((candidate) => candidate.id === task.id) ?? 0);
+  const knownIndex = originalStage?.tasks.findIndex((candidate) => candidate.id === task.id) ?? -1;
+  const originalIndex = knownIndex < 0 ? (originalStage?.hasMore ? 'end' : 0) : knownIndex;
   fillPositions(originalIndex);
 
   stageSelect.addEventListener('change', () => {
@@ -60,7 +62,7 @@ export function openMoveTaskModal({ task, stages }) {
       return;
     }
     const index = Number(positionSelect.value);
-    const unchanged = stageId === task.stageId && index === originalIndex;
+    const unchanged = stageId === task.stageId && knownIndex >= 0 && index === originalIndex;
     modal.close(unchanged ? null : { stageId, index });
   }, { signal });
 

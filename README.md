@@ -364,3 +364,41 @@ that establish protected audit context while preserving existing mutation signat
 permissions, one-event moves/deletes, private context, deletion snapshots, RLS,
 rollback, and stable pagination using isolated PostgreSQL fixtures. Browser UI and
 concurrent sessions are not exercised by this test.
+
+### Project board interface
+
+The board uses scoped task-surface tokens, a compact project header, expandable
+project descriptions, exact project/stage totals, and a primary Add task action.
+Secondary project actions live in a disclosure menu; manager actions retain the
+existing permission hints. Cards show a safe plain-text excerpt and only available
+labels, assignees, deadlines, checklist progress, attachment counts and comment counts.
+Card action menus support keyboard navigation; dragging starts only from the grip.
+Task dialogs group the description/checklist/discussion separately from properties.
+Mobile layouts include expandable filter controls and a stage-jump selector.
+
+Title/description search and status, stage, label, assignment and deadline filters
+retain their values through task dialogs and CRUD refreshes. Active filter chips
+can be removed individually or cleared together. Empty projects and no-match
+searches have distinct states. Full description text is searched, not just excerpts.
+
+Unfiltered columns retain keyset pagination. To make filtered counts and results
+complete without changing the schema or adding a search RPC, an active filter scans
+all accessible task pages with bounded column concurrency. The UI reports scan
+progress and cancels superseded requests. This can be slower on very large projects;
+server-side full-text search would require a separate backend change. The full
+canonical task arrays remain separate from the visible filtered cards. Dragging is
+disabled while filters are active; Move remains available and uses the existing
+relative-anchor/end-of-stage RPC. Never submit visible-card indexes as persisted order.
+
+`npm run test:board` checks search/filter semantics. `npm run test:board:browser`
+uses local Chrome's DevTools protocol without adding a browser dependency. Start
+Vite on `127.0.0.1:5173` and a separate Chrome profile with
+`--headless --remote-debugging-port=9223 --user-data-dir=/tmp/taskboard-browser-checks`.
+Optional `BOARD_APP_URL` and `BOARD_CDP_URL` must be loopback URLs. The browser test
+creates/closes its own tab and replaces Supabase HTTP/Realtime traffic with synthetic
+fixtures; it does not mutate real accounts or database rows. It exercises desktop
+and mobile layouts, partial loading, full-project search, CRUD and failure recovery,
+filter retention, native dragging, keyboard moves, reload persistence, Realtime,
+permission hints, empty/error states, access loss and safe long text. Screenshots
+are saved to the temporary directory printed by the test. These checks do not prove
+live Supabase authorization or live network behaviour, and were run in Chrome only.

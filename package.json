@@ -17,7 +17,9 @@
     "test:labels": "node scripts/test-project-labels.mjs",
     "test:deadlines": "node scripts/test-deadlines.mjs",
     "test:checklists": "node scripts/test-checklists.mjs",
-    "test:activity": "node scripts/test-activity.mjs"
+    "test:activity": "node scripts/test-activity.mjs",
+    "test:board": "node scripts/test-board-filters.mjs",
+    "test:board:browser": "node scripts/test-board-browser.mjs"
   },
   "keywords": [],
   "author": "",

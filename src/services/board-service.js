@@ -1,3 +1,4 @@
+import { listProjectLabels } from './labels-service.js';
 import { getChecklistProgress } from './checklist-service.js';
 import { listTaskAssignees } from './assignees-service.js';
 import { supabaseClient } from './supabase-client.js';
@@ -14,10 +15,12 @@ export const BOARD_RELOAD_LIMIT = 500;
 
 const byPositionThenId = (a, b) => a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-const TASK_COLUMNS = 'id, stage_id, title, description, position, done, due_at, created_at, updated_at, task_labels(project_labels(id, name, colour))';
+const TASK_COLUMNS = 'id, stage_id, title, description, position, done, due_at, created_at, updated_at, task_labels(project_labels(id, name, colour)), task_attachments(count), task_comments(count)';
 
 const mapTask = (task) => ({
   labels: (task.task_labels ?? []).map((row) => row.project_labels).filter(Boolean),
+  attachmentCount: Number(task.task_attachments?.[0]?.count ?? 0),
+  commentCount: Number(task.task_comments?.[0]?.count ?? 0),
   id: task.id,
   title: task.title,
   description: task.description ?? '',
@@ -78,10 +81,10 @@ export async function fetchColumnTasks(stageId, { cursor = null, limit = BOARD_P
 // `depths` (stage id -> number of rows currently shown) makes a reload re-read each column from the top down to
 // at least that depth in ONE request per column, so the result is a consistent snapshot rather than old and new
 // pages glued together. Access is decided by RLS; a missing or inaccessible project throws ProjectNotFoundError.
-export async function getBoard(projectId, { signal, depths } = {}) {
+export async function getBoard(projectId, { signal, depths, complete = false, onProgress } = {}) {
   const project = await getProject(projectId, { signal });
 
-  const [stagesResult, countsResult] = await Promise.all([
+  const [stagesResult, countsResult, labels] = await Promise.all([
     withSignal(
       supabaseClient
         .from('project_stages')
@@ -93,6 +96,7 @@ export async function getBoard(projectId, { signal, depths } = {}) {
       signal,
     ),
     withSignal(supabaseClient.rpc('board_stage_counts', { p_project_id: project.id }), signal),
+    listProjectLabels(project.id, { signal }),
   ]);
   if (stagesResult.error || countsResult.error) throw new Error('Could not load this board.');
 
@@ -106,14 +110,30 @@ export async function getBoard(projectId, { signal, depths } = {}) {
     }))
     .sort(byPositionThenId);
 
-  const pages = await Promise.all(
-    stages.map((stage) =>
-      fetchColumnTasks(stage.id, {
-        limit: Math.max(BOARD_PAGE_SIZE, depths?.get(stage.id) ?? 0),
-        signal,
-      }),
-    ),
-  );
+  // Filters must include unloaded tasks. Drain keyset pages without changing canonical ordering.
+  // Bound concurrency to three columns; each metadata batch remains at most 500 tasks.
+  const pages = new Array(stages.length);
+  let nextStage = 0;
+  let scanned = 0;
+  async function worker() {
+    while (nextStage < stages.length) {
+      const index = nextStage++;
+      const stage = stages[index];
+      let page = await fetchColumnTasks(stage.id, {
+        limit: Math.max(BOARD_PAGE_SIZE, depths?.get(stage.id) ?? 0), signal,
+      });
+      const tasks = [...page.tasks];
+      scanned += page.tasks.length; onProgress?.(scanned);
+      const known = new Set(tasks.map(task => task.id));
+      while (complete && page.hasMore) {
+        page = await fetchColumnTasks(stage.id, { cursor: page.nextCursor, limit: BOARD_RELOAD_LIMIT, signal });
+        for (const task of page.tasks) if (!known.has(task.id)) { tasks.push(task); known.add(task.id); }
+        scanned += page.tasks.length; onProgress?.(scanned);
+      }
+      pages[index] = { ...page, tasks };
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(3, stages.length) }, worker));
 
   stages.forEach((stage, index) => {
     const page = pages[index];
@@ -126,5 +146,5 @@ export async function getBoard(projectId, { signal, depths } = {}) {
     stage.taskCount = page.hasMore ? Math.max(totals.get(stage.id) ?? 0, page.tasks.length + 1) : page.tasks.length;
   });
 
-  return { project, stages };
+  return { project, stages, labels };
 }
