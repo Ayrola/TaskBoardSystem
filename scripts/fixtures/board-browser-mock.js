@@ -44,7 +44,9 @@
     }
     if(path==='update_task_with_deadline'||path==='update_task'){
       if(mock.failSave)return respond({message:'Preview save failure'},500);
-      const task=tasks.find(t=>t.id===body.p_task_id);Object.assign(task,{title:body.p_title,description:body.p_description,stage_id:body.p_stage_id,due_at:body.p_due_at});persist();return respond(null);
+      const task=tasks.find(t=>t.id===body.p_task_id);const source=task.stage_id;
+      if(body.p_stage_id && body.p_stage_id!==source){task.position=tasks.filter(t=>t.stage_id===body.p_stage_id).length;task.stage_id=body.p_stage_id;tasks.filter(t=>t.stage_id===source).sort((a,b)=>a.position-b.position).forEach((t,i)=>t.position=i);}
+      Object.assign(task,{title:body.p_title,description:body.p_description,done:stages.find(s=>s.id===task.stage_id).is_done,due_at:body.p_due_at===undefined?task.due_at:body.p_due_at});persist();return respond(null);
     }
     if(path==='delete_task'){const index=tasks.findIndex(t=>t.id===body.p_task_id);tasks.splice(index,1);persist();return respond(body.p_task_id);}
     if(path==='move_task_relative'){

@@ -38,7 +38,7 @@ export async function createTask({ projectId, stageId, title, description, dueAt
 
 // Changing the stage moves the task to the end of the new stage; `done` follows the stage in the database.
 export async function updateTask(taskId, { stageId, title, description, dueAt }) {
-  if (!isUuid(taskId) || !isUuid(stageId)) throw new TaskNotFoundError();
+  if (!isUuid(taskId) || (stageId !== null && !isUuid(stageId))) throw new TaskNotFoundError();
 
   const { error } = await supabaseClient.rpc(dueAt === undefined ? 'update_task' : 'update_task_with_deadline', {
     ...(dueAt === undefined ? {} : { p_due_at: dueAt }),

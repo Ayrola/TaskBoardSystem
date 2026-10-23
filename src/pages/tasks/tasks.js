@@ -707,9 +707,8 @@ export function mount(container, ctx) {
       if (!stage) throw new TaskNotFoundError();
       await runFlow(async () => {
         const found = { task, stage };
-        const action = await runDialog(() => openTaskViewModal({ ...found, projectId: task.projectId }));
+        const action = await runDialog(() => openTaskViewModal({ ...found, projectId: task.projectId, stages: data.stages, onSave: values => save(task.id, values) }));
         if (ctx.signal.aborted) return false;
-        if (action === 'edit') return editTask(found);
         if (action === 'delete') return removeTask(found);
         return true;
       }, { taskId });
@@ -721,9 +720,8 @@ export function mount(container, ctx) {
   async function viewTask(taskId) {
     const found = findTask(taskId);
     if (!found) return false;
-    const action = await runDialog(() => openTaskViewModal({ ...found, projectId: data.project.id }));
+    const action = await runDialog(() => openTaskViewModal({ ...found, projectId: data.project.id, stages: data.stages, onSave: values => save(taskId, values) }));
     if (ctx.signal.aborted) return false;
-    if (action === 'edit') return editTask(found);
     if (action === 'delete') return removeTask(found);
     return true; // Assignment changes in details must also refresh the cards.
   }

@@ -1,24 +1,12 @@
 import '../task-dialog.css';
 import { browserTimezone, toLocalDeadlineInput, deadlineFromEditor } from '../../utils/deadlines.js';
-import Quill from 'quill';
-import 'quill/dist/quill.snow.css';
+import { createTaskDescriptionEditor } from '../task-description-editor.js';
 import html from './task-form-modal.html?raw';
 import './task-form-modal.css';
 import { mountModal } from '../../utils/modal-host.js';
 import { setText } from '../../utils/render.js';
 import { sanitizeRichText, RICH_TEXT_MAX_LENGTH } from '../../utils/sanitize.js';
 import { validateTaskTitle, validateTaskStage } from '../../utils/validation.js';
-
-// Formats the editor can produce. Kept in step with the allowlist in utils/sanitize.js;
-// images, video, colours, fonts and headings are deliberately not enabled.
-const EDITOR_FORMATS = ['bold', 'italic', 'underline', 'strike', 'link', 'list', 'blockquote'];
-const TOOLBAR = [
-  ['bold', 'italic', 'underline', 'strike'],
-  ['link'],
-  [{ list: 'ordered' }, { list: 'bullet' }],
-  ['blockquote'],
-  ['clean'],
-];
 
 // Opens the add/edit task modal.
 //   mode:      'add' | 'edit'
@@ -70,22 +58,9 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
 
   // The toolbar is created by Quill inside the same wrapper as the editor element.
   const editorHost = element.querySelector('[data-editor]');
-  let quill = new Quill(editorHost, {
-    theme: 'snow',
-    formats: EDITOR_FORMATS,
-    modules: { toolbar: TOOLBAR },
-    placeholder: 'Add details…',
+  let quill = createTaskDescriptionEditor(editorHost, {
+    value: isEdit ? task.description : '', labelId: 'task-description-label', errorId: 'task-description-error',
   });
-  quill.root.setAttribute('aria-labelledby', 'task-description-label');
-  quill.root.setAttribute('aria-describedby', 'task-description-error');
-  quill.root.setAttribute('role', 'textbox');
-  quill.root.setAttribute('aria-multiline', 'true');
-
-  if (isEdit && task.description) {
-    // Stored HTML is sanitized first; Quill then converts it to its own document model.
-    const delta = quill.clipboard.convert({ html: sanitizeRichText(task.description) });
-    quill.setContents(delta, 'silent');
-  }
 
   let busy = false;
   modal.setCanClose(() => !busy);

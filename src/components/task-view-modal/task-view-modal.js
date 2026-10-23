@@ -1,13 +1,16 @@
 import '../task-dialog.css';
 import { setupTaskChecklist } from './task-checklist.js';
-import { renderTaskDeadline } from '../../utils/deadlines.js';
+import { renderTaskDeadline, browserTimezone, toLocalDeadlineInput, deadlineFromEditor } from '../../utils/deadlines.js';
 import { setupTaskLabels } from './task-labels.js';
 import { listTaskAssignees, searchTaskAssignees, setTaskAssignee } from '../../services/assignees-service.js';
 import html from './task-view-modal.html?raw';
 import './task-view-modal.css';
 import { mountModal } from '../../utils/modal-host.js';
 import { setText } from '../../utils/render.js';
-import { richTextToFragment } from '../../utils/sanitize.js';
+import { sanitizeRichText, RICH_TEXT_MAX_LENGTH } from '../../utils/sanitize.js';
+import { validateTaskTitle, validateTaskStage } from '../../utils/validation.js';
+import { createTaskDescriptionEditor } from '../task-description-editor.js';
+import '../task-form-modal/task-form-modal.css';
 import { formatDateTime } from '../../utils/dates.js';
 import { ATTACHMENT_ACCEPT, ATTACHMENT_HELP, ATTACHMENT_TYPES, formatFileSize } from '../../utils/files.js';
 import {
@@ -36,19 +39,34 @@ const FILE_ICONS = {
   Text: 'bi-file-earmark-text',
 };
 
-// Task details with attachments. `result` resolves 'edit', 'delete', or null when simply closed.
-// The description is sanitized and appended as DOM nodes; stored HTML is never assigned to innerHTML.
-export function openTaskViewModal({ task, stage, projectId }) {
+// Editable task details. `result` resolves 'saved', 'delete', or null on dismissal.
+export function openTaskViewModal({ task, stage, stages, projectId, onSave }) {
   const modal = mountModal(html, { dismissedValue: null });
   const { element, signal } = modal;
+  let saveBusy = false;
   let checklistBusy = false;
   let labelBusy = false;
   let assignmentBusy = false;
   let attachmentBusy = false;
-  modal.setCanClose(() => !checklistBusy && !labelBusy && !assignmentBusy && !attachmentBusy);
+  modal.setCanClose(() => !saveBusy && !checklistBusy && !labelBusy && !assignmentBusy && !attachmentBusy);
 
-  setText(element, '[data-task-title]', task.title);
+  const titleInput = element.querySelector('[data-task-title]');
+  titleInput.value = task.title;
   element.querySelector('[data-task-activity]').href = `/activity?project=${encodeURIComponent(projectId)}&task=${encodeURIComponent(task.id)}`;
+  const stageInput = element.querySelector('[data-stage-input]');
+  stageInput.replaceChildren(...stages.map(item => new Option(item.name, item.id)));
+  const originalStageId = task.stageId ?? stage?.id;
+  stageInput.value = originalStageId;
+  const deadlineInput = element.querySelector('[data-deadline-input]');
+  const clearDeadline = element.querySelector('[data-clear-deadline]');
+  deadlineInput.value = toLocalDeadlineInput(task.dueAt);
+  setText(element, '[data-deadline-help]', `Local time (${browserTimezone()}). Repeated times when clocks go back use the first occurrence; unchanged deadlines keep their original instant.`);
+  stageInput.addEventListener('change', () => {
+    element.querySelector('[data-stage-hint]').hidden = stageInput.value === originalStageId;
+  }, { signal });
+  clearDeadline.addEventListener('click', () => {
+    deadlineInput.value = ''; setText(element, '[data-deadline-error]', ''); deadlineInput.focus();
+  }, { signal });
   const deadline = element.querySelector('[data-deadline]');
   renderTaskDeadline(deadline, task);
   const deadlineTimer = setInterval(() => renderTaskDeadline(deadline, task), 30000);
@@ -56,12 +74,10 @@ export function openTaskViewModal({ task, stage, projectId }) {
   setText(element, '[data-stage-badge]', stage?.name ?? '');
   element.querySelector('[data-done-badge]').hidden = !task.done;
 
-  const description = element.querySelector('[data-description]');
-  const fragment = richTextToFragment(task.description);
-  const hasDescription = fragment.textContent.trim() !== '';
-  if (hasDescription) description.replaceChildren(fragment);
-  description.hidden = !hasDescription;
-  element.querySelector('[data-no-description]').hidden = hasDescription;
+  let editor = createTaskDescriptionEditor(element.querySelector('[data-description-editor]'), {
+    value: task.description, labelId: 'task-view-description-label', errorId: 'task-view-description-error',
+  });
+  signal.addEventListener('abort', () => { editor = null; }, { once: true });
 
   setText(element, '[data-created]', formatDateTime(task.createdAt));
   const updated = formatDateTime(task.updatedAt);
@@ -69,19 +85,67 @@ export function openTaskViewModal({ task, stage, projectId }) {
   element.querySelector('[data-updated-row]').hidden = !edited;
   if (edited) setText(element, '[data-updated]', updated);
 
-  const editButton = element.querySelector('[data-action="edit"]');
+  const saveButton = element.querySelector('[data-action="save"]');
   const deleteButton = element.querySelector('[data-action="delete"]');
-  editButton.addEventListener('click', () => modal.close('edit'), { signal });
+  saveButton.addEventListener('click', async () => {
+    if (saveBusy || checklistBusy || labelBusy || assignmentBusy || attachmentBusy) return;
+    const titleError = validateTaskTitle(titleInput.value);
+    const stageError = validateTaskStage(stageInput.value) || (!stages.some(item => item.id === stageInput.value) ? 'Choose an available stage.' : '');
+    let dueAt = null;
+    let deadlineError = deadlineInput.validity.badInput ? 'Enter a complete deadline date and time, or clear it.' : '';
+    try { dueAt = deadlineFromEditor(deadlineInput.value, task.dueAt); }
+    catch (error) { deadlineError = error.message; }
+    setText(element, '[data-stage-error]', stageError);
+    setText(element, '[data-deadline-error]', deadlineError);
+    stageInput.classList.toggle('is-invalid', Boolean(stageError));
+    stageInput.setAttribute('aria-invalid', String(Boolean(stageError)));
+    deadlineInput.classList.toggle('is-invalid', Boolean(deadlineError));
+    deadlineInput.setAttribute('aria-invalid', String(Boolean(deadlineError)));
+    const description = editor.getSemanticHTML().replace(/&nbsp;/g, ' ');
+    const descriptionError = sanitizeRichText(description).length > RICH_TEXT_MAX_LENGTH ? 'The description is too long.' : '';
+    setText(element, '[data-title-error]', titleError ?? '');
+    setText(element, '[data-description-error]', descriptionError);
+    titleInput.classList.toggle('is-invalid', Boolean(titleError));
+    titleInput.setAttribute('aria-invalid', String(Boolean(titleError)));
+    editor.root.setAttribute('aria-invalid', String(Boolean(descriptionError)));
+    const errorBox = element.querySelector('[data-save-error]'); errorBox.hidden = true;
+    if (titleError) { titleInput.focus(); return; }
+    if (stageError) { stageInput.focus(); return; }
+    if (deadlineError) { deadlineInput.focus(); return; }
+    if (descriptionError) { editor.focus(); return; }
+    saveBusy = true; setSaving(true);
+    try {
+      await onSave({ title: titleInput.value, description, stageId: stageInput.value, dueAt });
+      if (!signal.aborted) modal.close('saved');
+    } catch (error) {
+      if (!signal.aborted) {
+        errorBox.textContent = error.message || 'Could not save the task. Please try again.';
+        errorBox.hidden = false; errorBox.scrollIntoView({ block: 'nearest' });
+      }
+    } finally {
+      saveBusy = false;
+      if (!signal.aborted) setSaving(false);
+    }
+  }, { signal });
+  function setSaving(busy) {
+    titleInput.readOnly = busy; editor.enable(!busy);
+    stageInput.disabled = deadlineInput.disabled = clearDeadline.disabled = busy;
+    saveButton.disabled = deleteButton.disabled = busy || checklistBusy || labelBusy || assignmentBusy || attachmentBusy;
+    element.querySelector('[data-save-spinner]').hidden = !busy;
+    element.setAttribute('aria-busy', String(busy));
+    element.querySelectorAll('[data-bs-dismiss]').forEach(button => { button.disabled = busy; });
+    element.querySelectorAll('.task-detail-main > section:not(.task-overview), .task-detail-sidebar').forEach(section => { section.inert = busy; });
+  }
   deleteButton.addEventListener('click', () => modal.close('delete'), { signal });
-  element.addEventListener('shown.bs.modal', () => editButton.focus(), { signal });
+  element.addEventListener('shown.bs.modal', () => titleInput.focus(), { signal });
 
   setupTaskChecklist(element, { taskId: task.id, signal, setBusy: (busy) => {
     checklistBusy = busy;
-    editButton.disabled = deleteButton.disabled = checklistBusy || labelBusy || assignmentBusy || attachmentBusy;
+    saveButton.disabled = deleteButton.disabled = saveBusy || checklistBusy || labelBusy || assignmentBusy || attachmentBusy;
   } });
   setupTaskLabels(element, { taskId: task.id, projectId, signal, setBusy: (busy) => {
     labelBusy = busy;
-    editButton.disabled = deleteButton.disabled = labelBusy || assignmentBusy || attachmentBusy || checklistBusy;
+    saveButton.disabled = deleteButton.disabled = saveBusy || labelBusy || assignmentBusy || attachmentBusy || checklistBusy;
   } });
   setupAssignees();
   setupAttachments();
@@ -153,7 +217,7 @@ export function openTaskViewModal({ task, stage, projectId }) {
       if (busy || !loaded) return;
       busy = true;
       assignmentBusy = true;
-      editButton.disabled = true;
+      saveButton.disabled = true;
       deleteButton.disabled = true;
       showError();
       render();
@@ -168,8 +232,8 @@ export function openTaskViewModal({ task, stage, projectId }) {
         busy = false;
         assignmentBusy = false;
         if (!signal.aborted) {
-          editButton.disabled = attachmentBusy || labelBusy || checklistBusy;
-          deleteButton.disabled = attachmentBusy || labelBusy || checklistBusy;
+          saveButton.disabled = saveBusy || attachmentBusy || labelBusy || checklistBusy;
+          deleteButton.disabled = saveBusy || attachmentBusy || labelBusy || checklistBusy;
           render();
         }
       }
@@ -457,8 +521,8 @@ export function openTaskViewModal({ task, stage, projectId }) {
       uploadIcon.hidden = active;
       uploadLabel.textContent = label;
       uploadButton.disabled = active;
-      editButton.disabled = active || assignmentBusy || labelBusy || checklistBusy;
-      deleteButton.disabled = active || assignmentBusy || labelBusy || checklistBusy;
+      saveButton.disabled = saveBusy || active || assignmentBusy || labelBusy || checklistBusy;
+      deleteButton.disabled = saveBusy || active || assignmentBusy || labelBusy || checklistBusy;
       for (const button of list.querySelectorAll('button')) button.disabled = active;
     }
 
