@@ -1,3 +1,5 @@
+import { setupTaskChecklist } from './task-checklist.js';
+import { renderTaskDeadline } from '../../utils/deadlines.js';
 import { setupTaskLabels } from './task-labels.js';
 import { listTaskAssignees, searchTaskAssignees, setTaskAssignee } from '../../services/assignees-service.js';
 import html from './task-view-modal.html?raw';
@@ -38,12 +40,18 @@ const FILE_ICONS = {
 export function openTaskViewModal({ task, stage, projectId }) {
   const modal = mountModal(html, { dismissedValue: null });
   const { element, signal } = modal;
+  let checklistBusy = false;
   let labelBusy = false;
   let assignmentBusy = false;
   let attachmentBusy = false;
-  modal.setCanClose(() => !labelBusy && !assignmentBusy && !attachmentBusy);
+  modal.setCanClose(() => !checklistBusy && !labelBusy && !assignmentBusy && !attachmentBusy);
 
   setText(element, '[data-task-title]', task.title);
+  element.querySelector('[data-task-activity]').href = `/activity?project=${encodeURIComponent(projectId)}&task=${encodeURIComponent(task.id)}`;
+  const deadline = element.querySelector('[data-deadline]');
+  renderTaskDeadline(deadline, task);
+  const deadlineTimer = setInterval(() => renderTaskDeadline(deadline, task), 30000);
+  signal.addEventListener('abort', () => clearInterval(deadlineTimer), { once: true });
   setText(element, '[data-stage-badge]', stage?.name ?? '');
   element.querySelector('[data-done-badge]').hidden = !task.done;
 
@@ -66,9 +74,13 @@ export function openTaskViewModal({ task, stage, projectId }) {
   deleteButton.addEventListener('click', () => modal.close('delete'), { signal });
   element.addEventListener('shown.bs.modal', () => editButton.focus(), { signal });
 
+  setupTaskChecklist(element, { taskId: task.id, signal, setBusy: (busy) => {
+    checklistBusy = busy;
+    editButton.disabled = deleteButton.disabled = checklistBusy || labelBusy || assignmentBusy || attachmentBusy;
+  } });
   setupTaskLabels(element, { taskId: task.id, projectId, signal, setBusy: (busy) => {
     labelBusy = busy;
-    editButton.disabled = deleteButton.disabled = labelBusy || assignmentBusy || attachmentBusy;
+    editButton.disabled = deleteButton.disabled = labelBusy || assignmentBusy || attachmentBusy || checklistBusy;
   } });
   setupAssignees();
   setupAttachments();
@@ -155,8 +167,8 @@ export function openTaskViewModal({ task, stage, projectId }) {
         busy = false;
         assignmentBusy = false;
         if (!signal.aborted) {
-          editButton.disabled = attachmentBusy || labelBusy;
-          deleteButton.disabled = attachmentBusy || labelBusy;
+          editButton.disabled = attachmentBusy || labelBusy || checklistBusy;
+          deleteButton.disabled = attachmentBusy || labelBusy || checklistBusy;
           render();
         }
       }
@@ -444,8 +456,8 @@ export function openTaskViewModal({ task, stage, projectId }) {
       uploadIcon.hidden = active;
       uploadLabel.textContent = label;
       uploadButton.disabled = active;
-      editButton.disabled = active || assignmentBusy || labelBusy;
-      deleteButton.disabled = active || assignmentBusy || labelBusy;
+      editButton.disabled = active || assignmentBusy || labelBusy || checklistBusy;
+      deleteButton.disabled = active || assignmentBusy || labelBusy || checklistBusy;
       for (const button of list.querySelectorAll('button')) button.disabled = active;
     }
 

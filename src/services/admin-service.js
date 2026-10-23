@@ -183,11 +183,12 @@ const mapTask = (row) => ({
   description: row.description ?? '',
   position: row.position,
   done: row.done,
+  dueAt: row.due_at,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
 
-const TASK_COLUMNS = 'id, project_id, stage_id, title, description, position, done, created_at, updated_at';
+const TASK_COLUMNS = 'id, project_id, stage_id, title, description, position, done, due_at, created_at, updated_at';
 
 export async function listProjectTasks(projectId, { page = 1, signal } = {}) {
   if (!isUuid(projectId)) throw new AdminNotFoundError('Project');
@@ -195,7 +196,7 @@ export async function listProjectTasks(projectId, { page = 1, signal } = {}) {
   const { data, error, count } = await withSignal(
     supabaseClient
       .from('tasks')
-      .select('id, project_id, stage_id, title, position, done, created_at, updated_at', { count: 'exact' })
+      .select('id, project_id, stage_id, title, position, done, due_at, created_at, updated_at', { count: 'exact' })
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .order('id')

@@ -1,3 +1,4 @@
+import { renderTaskDeadline } from '../../utils/deadlines.js';
 import html from './admin-task.html?raw';
 import { renderFragment, setText } from '../../utils/render.js';
 import { richTextToFragment } from '../../utils/sanitize.js';
@@ -40,7 +41,7 @@ export function mount(container, ctx) {
     editor = openTaskFormModal({
       mode: 'edit',
       stages: stages.map((stage) => ({ id: stage.id, name: stage.name })),
-      task: { id: task.id, title: task.title, description: task.description, stageId: task.stageId },
+      task: { id: task.id, title: task.title, description: task.description, stageId: task.stageId, dueAt: task.dueAt },
       onSubmit: async (values) => {
         try {
           await updateTask(task.id, values);
@@ -86,6 +87,7 @@ export function mount(container, ctx) {
       setLink('[data-link="stage"]', `/admin/stages/${encodeURIComponent(task.stageId)}`, stage?.name ?? 'Stage');
       const status = setText(root, '[data-field="status"]', task.done ? 'Done' : 'Open');
       status.classList.add(task.done ? 'text-bg-success' : 'text-bg-secondary');
+      renderTaskDeadline(root.querySelector('[data-deadline]'), task);
       setText(root, '[data-field="position"]', task.position + 1);
       setText(root, '[data-field="created"]', formatDateTime(task.createdAt));
       setText(root, '[data-field="updated"]', formatDateTime(task.updatedAt));

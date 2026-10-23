@@ -21,10 +21,11 @@ function prepareDescription(value) {
 }
 
 // New tasks are appended to the end of the stage by the database (serialized per project).
-export async function createTask({ projectId, stageId, title, description }) {
+export async function createTask({ projectId, stageId, title, description, dueAt = null }) {
   if (!isUuid(projectId) || !isUuid(stageId)) throw new TaskNotFoundError();
 
-  const { data, error } = await supabaseClient.rpc('create_task', {
+  const { data, error } = await supabaseClient.rpc('create_task_with_deadline', {
+    p_due_at: dueAt,
     p_project_id: projectId,
     p_stage_id: stageId,
     p_title: title.trim(),
@@ -36,10 +37,11 @@ export async function createTask({ projectId, stageId, title, description }) {
 }
 
 // Changing the stage moves the task to the end of the new stage; `done` follows the stage in the database.
-export async function updateTask(taskId, { stageId, title, description }) {
+export async function updateTask(taskId, { stageId, title, description, dueAt }) {
   if (!isUuid(taskId) || !isUuid(stageId)) throw new TaskNotFoundError();
 
-  const { error } = await supabaseClient.rpc('update_task', {
+  const { error } = await supabaseClient.rpc(dueAt === undefined ? 'update_task' : 'update_task_with_deadline', {
+    ...(dueAt === undefined ? {} : { p_due_at: dueAt }),
     p_task_id: taskId,
     p_title: title.trim(),
     p_description: prepareDescription(description),
@@ -107,11 +109,11 @@ export async function moveTask({ taskId, stageId, afterTaskId = null, toEnd = fa
 // Used by links from paginated label results, including tasks outside the board's loaded pages.
 export async function getTask(taskId, { signal } = {}) {
   if (!isUuid(taskId)) throw new TaskNotFoundError();
-  let query = supabaseClient.from('tasks').select('id, project_id, stage_id, title, description, done, created_at, updated_at').eq('id', taskId).maybeSingle();
+  let query = supabaseClient.from('tasks').select('id, project_id, stage_id, title, description, done, due_at, created_at, updated_at').eq('id', taskId).maybeSingle();
   if (signal) query = query.abortSignal(signal);
   const { data, error } = await query;
   if (error) throw new Error('Could not load the task.');
   if (!data) throw new TaskNotFoundError();
   return { id: data.id, projectId: data.project_id, stageId: data.stage_id, title: data.title,
-    description: data.description ?? '', done: data.done, createdAt: data.created_at, updatedAt: data.updated_at };
+    description: data.description ?? '', done: data.done, dueAt: data.due_at, createdAt: data.created_at, updatedAt: data.updated_at };
 }

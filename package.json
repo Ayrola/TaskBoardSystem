@@ -14,7 +14,10 @@
     "seed:loadtest:cleanup": "node scripts/seed-loadtest.js --cleanup --confirm-dev",
     "bootstrap-admin": "node scripts/bootstrap-admin.js",
     "test:assignees": "node scripts/test-task-assignees.mjs",
-    "test:labels": "node scripts/test-project-labels.mjs"
+    "test:labels": "node scripts/test-project-labels.mjs",
+    "test:deadlines": "node scripts/test-deadlines.mjs",
+    "test:checklists": "node scripts/test-checklists.mjs",
+    "test:activity": "node scripts/test-activity.mjs"
   },
   "keywords": [],
   "author": "",

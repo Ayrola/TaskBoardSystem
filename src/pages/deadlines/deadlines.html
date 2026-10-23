@@ -1,0 +1,29 @@
+<section aria-labelledby="deadlines-heading" data-deadlines>
+  <h1 class="h2" id="deadlines-heading">Deadlines</h1>
+  <p class="text-body-secondary">Open tasks only. Today includes the whole local calendar day, including tasks already overdue. Upcoming starts at tomorrow’s midnight.</p>
+  <form class="row g-3 mb-4" data-filters>
+    <div class="col-md-3">
+      <label for="deadline-bucket" class="form-label">Show</label>
+      <select class="form-select" id="deadline-bucket" name="bucket">
+        <option value="overdue">Overdue</option><option value="today">Today</option><option value="upcoming">Upcoming</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label for="deadline-project" class="form-label">Project</label>
+      <select class="form-select" id="deadline-project" name="project" disabled><option value="">All accessible projects</option></select>
+    </div>
+    <div class="col-md-4">
+      <label for="deadline-timezone" class="form-label">Display timezone</label>
+      <input class="form-control" id="deadline-timezone" name="timezone" list="deadline-timezones" required maxlength="100" aria-describedby="deadline-timezone-help" />
+      <datalist id="deadline-timezones"></datalist>
+      <div class="form-text" id="deadline-timezone-help">IANA timezone, for example Europe/Sofia. Determines midnight boundaries.</div>
+    </div>
+    <div class="col-md-2 align-self-start pt-md-4"><button class="btn btn-primary mt-md-2" type="submit">Apply filters</button></div>
+  </form>
+  <div class="alert alert-danger" data-error role="alert" hidden></div>
+  <button class="btn btn-outline-secondary btn-sm mb-3" data-retry type="button" hidden>Try again</button>
+  <p role="status" data-status>Loading deadlines…</p>
+  <p class="small text-body-secondary" data-zone-summary></p>
+  <ul class="list-group" data-results aria-label="Tasks with deadlines"></ul>
+  <nav class="d-flex flex-wrap justify-content-between gap-2 mt-3" data-pager aria-label="Deadline pagination" hidden></nav>
+</section>

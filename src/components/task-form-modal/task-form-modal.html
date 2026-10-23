@@ -22,6 +22,15 @@
           <div class="form-text" data-stage-hint hidden>The task moves to the end of the chosen stage.</div>
         </div>
 
+        <div class="mb-3">
+          <label for="task-deadline" class="form-label">Deadline <span class="text-body-secondary">(optional)</span></label>
+          <div class="d-flex gap-2">
+            <input id="task-deadline" name="deadline" type="datetime-local" step="60" class="form-control" aria-describedby="task-deadline-help task-deadline-error" />
+            <button type="button" class="btn btn-outline-secondary" data-clear-deadline>Clear deadline</button>
+          </div>
+          <div id="task-deadline-error" class="invalid-feedback d-block" data-error-for="deadline"></div>
+          <div id="task-deadline-help" class="form-text" data-deadline-help></div>
+        </div>
         <div class="mb-0">
           <span id="task-description-label" class="form-label d-block">Description <span class="text-body-secondary">(optional)</span></span>
           <div class="task-editor" data-editor-wrap>

@@ -1,3 +1,4 @@
+import { browserTimezone, toLocalDeadlineInput, deadlineFromEditor } from '../../utils/deadlines.js';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import html from './task-form-modal.html?raw';
@@ -33,6 +34,14 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
   const form = element.querySelector('form');
   const titleInput = form.elements.title;
   const stageSelect = form.elements.stage;
+  const deadlineInput = form.elements.deadline;
+  const clearDeadline = element.querySelector('[data-clear-deadline]');
+  deadlineInput.value = toLocalDeadlineInput(task?.dueAt);
+  setText(element, '[data-deadline-help]', `Local time (${browserTimezone()}). Repeated times when clocks go back use the first occurrence; unchanged deadlines keep their original instant.`);
+  clearDeadline.addEventListener('click', () => {
+    deadlineInput.value = ''; setFieldError('deadline', null); deadlineInput.focus();
+  }, { signal });
+  deadlineInput.addEventListener('input', () => setFieldError('deadline', null), { signal });
   const formError = element.querySelector('[data-form-error]');
   const submitButton = element.querySelector('[data-submit]');
   const cancelButton = element.querySelector('[data-cancel]');
@@ -106,6 +115,8 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
     spinner.hidden = !value;
     titleInput.readOnly = value;
     stageSelect.disabled = value;
+    deadlineInput.disabled = value;
+    clearDeadline.disabled = value;
     quill.enable(!value);
     element.setAttribute('aria-busy', String(value));
   }
@@ -120,6 +131,10 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
     const descriptionError =
       description.length > RICH_TEXT_MAX_LENGTH ? 'The description is too long.' : null;
 
+    let deadlineError = deadlineInput.validity.badInput ? 'Enter a complete deadline date and time, or clear it.' : null;
+    try { deadlineFromEditor(deadlineInput.value, task?.dueAt); }
+    catch (error) { deadlineError = error.message; }
+    setFieldError('deadline', deadlineError);
     setFieldError('title', titleError);
     setFieldError('stage', stageError);
     setFieldError('description', descriptionError);
@@ -127,7 +142,8 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
     if (titleError) titleInput.focus();
     else if (stageError) stageSelect.focus();
     else if (descriptionError) quill.focus();
-    return !titleError && !stageError && !descriptionError;
+    else if (deadlineError) deadlineInput.focus();
+    return !titleError && !stageError && !descriptionError && !deadlineError;
   }
 
   form.addEventListener('submit', async (event) => {
@@ -142,6 +158,7 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
         title: titleInput.value,
         stageId: stageSelect.value,
         description: readDescription(),
+        dueAt: deadlineFromEditor(deadlineInput.value, task?.dueAt),
       });
     } catch (error) {
       if (signal.aborted) return;

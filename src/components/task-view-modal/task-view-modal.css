@@ -28,3 +28,8 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.task-view-modal .checklist-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

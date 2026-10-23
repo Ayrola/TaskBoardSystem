@@ -10,9 +10,29 @@
           <span class="badge text-bg-secondary" data-stage-badge></span>
           <span class="badge text-bg-success" data-done-badge hidden><i class="bi bi-check-circle" aria-hidden="true"></i> Done</span>
         </p>
+        <p class="small" data-deadline hidden></p>
+        <p class="small"><a data-task-activity href="/activity">View task activity</a></p>
         <div class="task-description" data-description></div>
         <p class="text-body-secondary fst-italic mb-0" data-no-description hidden>No description.</p>
 
+        <section class="mt-4" aria-labelledby="task-checklist-heading" data-task-checklist>
+          <h3 class="h6" id="task-checklist-heading">Checklist</h3>
+          <p class="small mb-1" data-checklist-summary aria-live="polite"></p>
+          <progress class="w-100 mb-2" value="0" max="1" hidden></progress>
+          <p class="small text-body-secondary">Completing the checklist does not change the task’s stage.</p>
+          <div class="alert alert-danger py-2 small" role="alert" data-checklist-error hidden></div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mb-2" data-checklist-retry hidden>Reload checklist</button>
+          <p class="small text-body-secondary" role="status" data-checklist-status>Loading checklist…</p>
+          <ol class="list-group list-group-numbered mb-3" aria-label="Checklist items in saved order" data-checklist-list></ol>
+          <form data-checklist-add>
+            <label class="form-label small" for="task-checklist-text">New checklist item</label>
+            <div class="d-flex gap-2">
+              <input class="form-control" id="task-checklist-text" name="text" maxlength="500" required aria-describedby="task-checklist-help" disabled />
+              <button class="btn btn-outline-primary flex-shrink-0" type="submit" disabled>Add item</button>
+            </div>
+            <p class="form-text" id="task-checklist-help">Plain text, up to 500 characters. Use the arrow buttons to reorder items.</p>
+          </form>
+        </section>
         <section class="mt-4" aria-labelledby="task-labels-heading" data-task-labels>
           <h3 class="h6" id="task-labels-heading">Labels</h3>
           <label class="form-label small" for="task-label-search">Find project labels</label>

@@ -1,3 +1,4 @@
+import { renderTaskDeadline } from '../../utils/deadlines.js';
 import { labelBadge } from '../../utils/labels.js';
 import Sortable from 'sortablejs';
 import html from './tasks.html?raw';
@@ -106,6 +107,9 @@ export function mount(container, ctx) {
     const card = cardTemplate.content.firstElementChild.cloneNode(true);
     card.dataset.taskId = task.id;
     setText(card, '[data-task-title]', task.title);
+    setText(card, '[data-checklist-progress]', task.checklist?.total
+      ? `Checklist: ${task.checklist.completed}/${task.checklist.total} complete` : 'No checklist items');
+    renderTaskDeadline(card.querySelector('[data-deadline]'), task);
     card.querySelector('[data-task-labels]').append(...(task.labels ?? []).map(labelBadge));
     setText(card, '[data-task-assignees]', task.assignees?.length
       ? `Assigned: ${task.assignees.map((a) => a.label).join(', ')}` : 'Unassigned');
@@ -213,6 +217,8 @@ export function mount(container, ctx) {
     description.hidden = !project.description;
     root.querySelector('[data-link="edit"]').hidden = !project.canManage;
     root.querySelector('[data-link="users"]').hidden = !project.canManage;
+    root.querySelector('[data-link="activity"]').href = `/activity?project=${id}`;
+    root.querySelector('[data-link="deadlines"]').href = `/deadlines?project=${id}`;
     root.querySelector('[data-link="labels"]').href = `/labels?project=${id}`;
     root.querySelector('[data-link="edit"]').href = `/projects/${id}/edit`;
     root.querySelector('[data-link="users"]').href = `/projects/${id}/users`;
@@ -592,5 +598,13 @@ export function mount(container, ctx) {
   );
 
   drainAttachmentCleanup(); // finishes file removals an earlier session could not complete
+  const deadlineTimer = setInterval(() => {
+    const tasks = new Map((data?.stages ?? []).flatMap((stage) => stage.tasks.map((task) => [task.id, task])));
+    for (const card of board.querySelectorAll('[data-task-id]')) {
+      const task = tasks.get(card.dataset.taskId);
+      if (task) renderTaskDeadline(card.querySelector('[data-deadline]'), task);
+    }
+  }, 30000);
+  ctx.cleanup.add(() => clearInterval(deadlineTimer));
   load();
 }

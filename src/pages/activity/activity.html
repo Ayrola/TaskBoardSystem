@@ -1,0 +1,20 @@
+<section aria-labelledby="activity-heading" data-activity>
+  <h1 class="h2" id="activity-heading">Task activity</h1>
+  <p class="text-body-secondary">Newest first. History begins when activity logging was enabled. Deleted tasks retain their reference and title snapshot.</p>
+  <form class="row g-3 mb-3" data-filters>
+    <div class="col-md-5">
+      <label class="form-label" for="activity-project">Project</label>
+      <select class="form-select" id="activity-project" name="project" disabled><option value="">All accessible projects</option></select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label" for="activity-task">Task ID (optional)</label>
+      <input class="form-control" id="activity-task" name="task" maxlength="36" placeholder="All tasks" />
+    </div>
+    <div class="col-md-2 align-self-end"><button type="submit" class="btn btn-primary">Apply filters</button></div>
+  </form>
+  <div class="alert alert-danger" role="alert" data-error hidden></div>
+  <button type="button" class="btn btn-outline-secondary btn-sm mb-2" data-refresh>Refresh activity</button>
+  <p class="text-body-secondary" role="status" data-status>Loading activity…</p>
+  <ol class="list-group list-unstyled" aria-label="Task activity, newest first" data-results></ol>
+  <nav class="d-flex flex-wrap justify-content-between gap-2 mt-3" aria-label="Activity pagination" data-pager hidden></nav>
+</section>

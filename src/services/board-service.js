@@ -1,3 +1,4 @@
+import { getChecklistProgress } from './checklist-service.js';
 import { listTaskAssignees } from './assignees-service.js';
 import { supabaseClient } from './supabase-client.js';
 import { getProject } from './projects-service.js';
@@ -13,7 +14,7 @@ export const BOARD_RELOAD_LIMIT = 500;
 
 const byPositionThenId = (a, b) => a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-const TASK_COLUMNS = 'id, stage_id, title, description, position, done, created_at, updated_at, task_labels(project_labels(id, name, colour))';
+const TASK_COLUMNS = 'id, stage_id, title, description, position, done, due_at, created_at, updated_at, task_labels(project_labels(id, name, colour))';
 
 const mapTask = (task) => ({
   labels: (task.task_labels ?? []).map((row) => row.project_labels).filter(Boolean),
@@ -22,6 +23,7 @@ const mapTask = (task) => ({
   description: task.description ?? '',
   position: task.position,
   done: task.done,
+  dueAt: task.due_at,
   createdAt: task.created_at,
   updatedAt: task.updated_at,
 });
@@ -60,10 +62,13 @@ export async function fetchColumnTasks(stageId, { cursor = null, limit = BOARD_P
 
   const hasMore = data.length > size;
   const rows = hasMore ? data.slice(0, size) : data;
-  const assignees = await listTaskAssignees(rows.map((task) => task.id), { signal });
+  const [assignees, checklist] = await Promise.all([
+    listTaskAssignees(rows.map((task) => task.id), { signal }),
+    getChecklistProgress(rows.map((task) => task.id), { signal }),
+  ]);
   const last = rows.at(-1);
   return {
-    tasks: rows.map((row) => ({ ...mapTask(row), assignees: assignees.filter((a) => a.task_id === row.id) })),
+    tasks: rows.map((row) => ({ ...mapTask(row), checklist: checklist.get(row.id), assignees: assignees.filter((a) => a.task_id === row.id) })),
     hasMore,
     nextCursor: hasMore && last ? { position: last.position, id: last.id } : null,
   };

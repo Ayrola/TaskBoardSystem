@@ -252,3 +252,115 @@ a task/project cascades its label data. Changes notify connected boards.
 Run `npm run test:labels` for isolated PostgreSQL authorization, consistency, pagination,
 cascade and colour contrast tests. These use PGlite, not the deployed database, and do
 not simulate concurrent sessions. Apply the new migration before deploying the client.
+
+
+### Task deadlines
+
+Tasks have an optional `due_at` timestamp. The shared task editor (including admin
+editing) can set, change, or clear it. Input is explicitly in the browser's local
+timezone and stored as an ISO UTC instant. Invalid/nonexistent local times are
+rejected; ambiguous times during the autumn clock change use the first occurrence.
+An unchanged deadline preserves the original seconds and offset, including the
+second occurrence of a repeated local time.
+
+`/deadlines` shows only accessible **open** tasks, filtered and paginated in the
+database (20 per page, ordered by deadline then ID). Overdue means before the server's
+current instant. Today spans midnight to the next midnight in the selected IANA
+display timezone, including any overdue tasks today. Upcoming starts at the next
+midnight. Day boundaries account for DST, including 23/25-hour days. The optional
+project selector contains only accessible projects. Applying filters resets pagination.
+The selected display timezone is remembered locally and also used for task deadline
+displays; the default is the browser timezone. Completed tasks retain their deadlines
+but are never marked as overdue work. The overview refreshes every minute; board
+markers refresh every 30 seconds. Deadline changes also trigger existing board updates.
+
+Deadline RPCs run as the caller and delegate to existing task creation/update RPCs
+in the same transaction, retaining RLS, project locks and stage positioning. Legacy
+RPCs preserve existing deadlines. Apply the `task_deadlines` migration before deploying
+the new client. Run `npm run test:deadlines` for PostgreSQL access/order/pagination
+checks and local-time/DST conversion tests. The deterministic day-boundary tests
+inject a clock only into the isolated PGlite fixture, never the deployed function.
+
+
+### Task checklists
+
+Open task details to add, edit, complete, delete, or reorder plain-text checklist items.
+Up/down buttons support keyboard reordering. A text summary and progress bar show
+completed/total items; cards also show progress, and empty lists offer an add-item form.
+Completing every item never changes the task's stage or its `done` flag.
+
+The `task_checklists` migration creates `task_checklist_items`, with RLS enforced
+through the parent task for owners, current project members and admins. Item text is
+1–500 characters and rendered using text nodes or form values. Task/item deletion
+cascades checklist data. Task IDs and generated metadata cannot be changed by clients.
+
+The invoker `write_task_checklist` RPC saves each mutation in a transaction using the
+existing authorized project lock, then rechecks the parent task. Reordering validates
+the complete new order against the expected current order; stale, duplicate, missing,
+and foreign item IDs are rejected atomically. Positions are unique per task and
+renumbered after deletion. A stale reorder refreshes the UI before retrying. Checklist
+changes notify connected boards; checklist writes do not modify parent task fields.
+
+Apply the new migration before deploying the client. `npm run test:checklists` runs
+isolated PostgreSQL tests for CRUD, ordering, stale snapshots, access rules, progress,
+empty lists, cascades and unchanged task state. It does not simulate concurrent sessions
+or exercise browser interactions.
+
+
+### Task activity log
+
+`/activity` shows accessible task activity newest first, with project/task filters
+and server-side pages of 20 entries. Board and task-detail links open the relevant
+history. Page links retain a server-generated ID boundary so newly appended events
+do not shift older pages; Refresh returns to the latest first page. Timestamps use
+the browser's local timezone. Deleted tasks show a saved title and stable task UUID
+without a broken task-details link.
+
+Covered changes, starting when `task_activity` is installed:
+
+- Task creation and deletion, including direct task writes.
+- Actual title changes, with old/new plain-text titles.
+- Description changes, recorded as a flag without copying rich-text bodies.
+- Stage changes, with stage UUIDs and name snapshots.
+- Explicit task position changes, with old/new zero-based positions (displayed as
+  one-based positions in the UI).
+- Completion changes, including changes caused by moving stages or editing a
+  stage's completed status. Completing a checklist still does not complete a task.
+
+A task row update can record several changed fields in one entry. An editor save
+that changes content and then moves a task may produce a content entry and a move
+entry. No-op writes, timestamp-only changes, and internal position shifts of
+neighbours during the supported move/delete/stage-removal functions are omitted.
+Stage removal records the actual tasks moved, and a drag records only its target.
+The public mutation signatures and board ordering behaviour are preserved.
+
+Audit generation runs in controlled database triggers. Actors come from server
+`auth.uid()`, never request body actor IDs; only the UUID is stored, with no duplicated
+email, auth metadata, tokens or credentials. Actorless database/maintenance writes
+are marked System/database operation. A private table holds temporary renumbering
+context; callers cannot write it or suppress auditing with browser-controlled
+settings. Private mutation implementations are not directly executable by clients.
+The controlled dispatcher checks owner/member/admin access before changing tasks,
+and manager access before stage deletion. Failed/rolled-back mutations leave no audit.
+Future ordering changes must retain these controlled mutation entry points.
+
+Authenticated application users, including application admins, can only read audit
+rows under project-access RLS. They cannot insert, edit, delete or truncate them.
+Database-owner/infrastructure privileges remain privileged. Task deletion preserves
+history; deleting a project removes its history, and no historical events are
+invented for tasks predating the migration. The log stores each event's task title,
+stage/position/completion data, not full task records or description contents.
+
+Not covered: deadlines, labels, assignees, checklist items, comments, attachments,
+project/member changes, stage renames/reordering, reads, logins, or changes to files
+in Storage. A stage completion change is covered only through its effects on tasks.
+Direct maintenance reordering outside the controlled mutation functions is logged
+per changed task because there is no trusted user-action context to group it.
+
+Migration `20261023070428_task_activity.sql` has been applied to the connected
+Supabase project. It includes the approved task move/delete and stage-delete wrappers
+that establish protected audit context while preserving existing mutation signatures.
+`npm run test:activity` checks audit coverage, trusted actors, append-only client
+permissions, one-event moves/deletes, private context, deletion snapshots, RLS,
+rollback, and stable pagination using isolated PostgreSQL fixtures. Browser UI and
+concurrent sessions are not exercised by this test.
