@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkBoardBrowser } from './fixtures/board-browser-checks.mjs';
+import { checkSidebarBrowser } from './fixtures/sidebar-browser-checks.mjs';
 const debugUrl = new URL(process.env.BOARD_CDP_URL ?? 'http://127.0.0.1:9223');
 const appUrl = new URL(process.env.BOARD_APP_URL ?? 'http://127.0.0.1:5173');
 for (const url of [debugUrl, appUrl]) if (!['127.0.0.1','localhost','[::1]'].includes(url.hostname)) throw new Error('Browser checks require local URLs.');
@@ -46,7 +47,7 @@ try {
   await wait(`document.querySelectorAll('.task-card').length===53 && document.querySelector('[data-live-status]').textContent==='Live updates connected'`);
   if(await evaluate(`document.documentElement.scrollWidth>innerWidth`))throw Error('Desktop page overflow.');
   await saveScreenshot('desktop.png');
-  await checkBoardBrowser({evaluate,send,wait,saveScreenshot,errors});
+  await (process.env.BOARD_CHECK_SIDEBAR ? checkSidebarBrowser : checkBoardBrowser)({evaluate,send,wait,saveScreenshot,errors});
   console.log(`Screenshots: ${outputDir}`);
 } catch(error) {
   await saveScreenshot('failure.png').catch(()=>{});

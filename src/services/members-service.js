@@ -1,3 +1,4 @@
+import { notifyProjectsChanged } from './project-events.js';
 import { supabaseClient } from './supabase-client.js';
 import { isUuid } from '../utils/validation.js';
 import { ProjectNotFoundError } from './projects-service.js';
@@ -61,7 +62,7 @@ export async function addMember(projectId, userId) {
   if (!isUuid(userId)) throw new MemberUnavailableError();
 
   const { error } = await supabaseClient.from('project_members').insert({ project_id: projectId, user_id: userId });
-  if (!error) return;
+  if (!error) { notifyProjectsChanged(); return; }
   if (error.code === '23505') throw new DuplicateMemberError();
   if (error.code === '23503') throw new MemberUnavailableError();
   // RLS denial: the caller is not (or no longer) the owner.
@@ -80,5 +81,6 @@ export async function removeMember(projectId, userId) {
     .eq('user_id', userId)
     .select('user_id');
   if (error) throw new Error('Could not remove this user. Please try again.');
+  notifyProjectsChanged();
   return (data?.length ?? 0) > 0;
 }

@@ -402,3 +402,13 @@ filter retention, native dragging, keyboard moves, reload persistence, Realtime,
 permission hints, empty/error states, access loss and safe long text. Screenshots
 are saved to the temporary directory printed by the test. These checks do not prove
 live Supabase authorization or live network behaviour, and were run in Chrome only.
+
+### Authenticated project navigation
+
+Private and admin routes share a persistent sidebar; public landing and login pages keep the public layout. The sidebar drains every page of the existing RLS-backed project listing before searching, so matches include owned and assigned projects beyond the first page. Management links use the API's `canManage` hint; database authorization remains unchanged.
+
+Project and membership mutations invalidate the in-memory directory. Existing board access broadcasts also invalidate it. External changes are rechecked on focus/visibility when stale and every minute while visible; no additional database publication is required. Logout and account changes abort pending requests and clear directory data. Only the collapsed navigation preference is stored locally.
+
+On desktop, collapse creates an icon rail. On mobile, Bootstrap Offcanvas supplies the backdrop, Escape handling and focus trap; closing restores focus to the navigation opener. The board keeps its own horizontal scrolling area.
+
+Run `npm run test:sidebar:browser` with local Vite and an isolated Chrome DevTools session (defaults: `127.0.0.1:5173` and `127.0.0.1:9223`). It uses synthetic API responses to check paginated search, empty/error states, permission links, directory refresh, persistent layout, history, collapse, mobile drawer/focus, account switching and logout. `npm run test:board:browser` covers board regressions. Neither browser suite writes to Supabase.

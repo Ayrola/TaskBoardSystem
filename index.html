@@ -8,8 +8,13 @@
   <body class="d-flex flex-column min-vh-100">
     <a class="visually-hidden-focusable position-absolute m-2 p-2 bg-body" href="#app">Skip to content</a>
     <div id="header"></div>
+    <div id="workspace" class="flex-grow-1">
+    <div id="navigation-shell" hidden></div>
+    <div class="workspace-content">
     <main id="app" class="flex-grow-1 container py-4" tabindex="-1"></main>
     <div id="footer"></div>
+    </div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

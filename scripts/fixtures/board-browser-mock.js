@@ -11,7 +11,7 @@
   const stored=sessionStorage.getItem('taskboard-browser-fixture');
   if(stored)tasks.splice(0,tasks.length,...JSON.parse(stored));
   const persist=()=>sessionStorage.setItem('taskboard-browser-fixture',JSON.stringify(tasks));
-  window.__boardMock={tasks,stages,id,failSave:false,failMove:false,failBoard:false,denied:false,member:false,calls:[]};
+  window.__boardMock={tasks,stages,id,user,failSave:false,failMove:false,failBoard:false,denied:false,member:false,calls:[]};
   const nativeFetch=window.fetch;
   window.fetch=async(input,init={})=>{
     const raw=typeof input==='string'?input:input.url;
@@ -19,8 +19,9 @@
     const url=new URL(raw);const path=url.pathname.split('/').at(-1); const body=init.body?JSON.parse(init.body):{};const mock=window.__boardMock;
     mock.calls.push({path,body,url:url.search});
     const respond=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','Access-Control-Allow-Origin':'*'}});
-    if(url.pathname.includes('/auth/')) return respond({user});
+    if(url.pathname.includes('/auth/')) return respond(path==='user'?user:{user});
     if(path==='is_admin')return respond(false);
+    if(path==='list_projects_page'){ if(mock.failProjects)return respond({message:'Preview project failure'},500); const rows=mock.navigationProjects??[{id:id(10),title:'Product workspace',is_owner:!mock.member,can_manage:!mock.member}];return respond({total:rows.length,rows:rows.slice(body.p_offset,body.p_offset+body.p_limit)}); }
     if(path==='projects')return respond(mock.denied?null:{id:id(10),title:'Product workspace',description:'A focused place to plan, build, and ship thoughtful product improvements. '+ 'Keep work visible, reduce friction, and bring the team along. '.repeat(4),owner_id:mock.member?id(99):user.id});
     if(path==='project_stages')return respond(stages);
     if(path==='project_labels')return respond([{id:id(31),project_id:id(10),name:'Product',colour:'#dce9ff'}]);

@@ -19,7 +19,8 @@
     "test:checklists": "node scripts/test-checklists.mjs",
     "test:activity": "node scripts/test-activity.mjs",
     "test:board": "node scripts/test-board-filters.mjs",
-    "test:board:browser": "node scripts/test-board-browser.mjs"
+    "test:board:browser": "node scripts/test-board-browser.mjs",
+    "test:sidebar:browser": "BOARD_CHECK_SIDEBAR=1 node scripts/test-board-browser.mjs"
   },
   "keywords": [],
   "author": "",

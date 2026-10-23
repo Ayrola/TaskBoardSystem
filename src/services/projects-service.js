@@ -1,3 +1,4 @@
+import { notifyProjectsChanged } from './project-events.js';
 import { supabaseClient } from './supabase-client.js';
 import { isUuid } from '../utils/validation.js';
 import { drainAttachmentCleanup } from './attachments-service.js';
@@ -53,6 +54,7 @@ export async function createProject({ title, description }) {
     p_description: cleanDescription(description),
   });
   if (error || !data) throw new Error('Could not create the project. Please try again.');
+  notifyProjectsChanged();
   return data;
 }
 
@@ -67,6 +69,7 @@ export async function updateProject(id, { title, description }) {
     .select('id');
   if (error) throw new Error('Could not save your changes. Please try again.');
   if (!data?.length) throw new ProjectNotFoundError();
+  notifyProjectsChanged();
 }
 
 // Stages, tasks and attachment rows are removed by the database (ON DELETE CASCADE). Storage objects are not,
@@ -77,6 +80,7 @@ export async function deleteProject(id) {
   const { data, error } = await supabaseClient.from('projects').delete().eq('id', id).select('id');
   if (error) throw new Error('Could not delete the project. Please try again.');
   if (!data?.length) throw new ProjectNotFoundError();
+  notifyProjectsChanged();
   await drainAttachmentCleanup();
 }
 
@@ -109,4 +113,16 @@ export async function listProjects({ page = 1, signal } = {}) {
       canManage: row.can_manage === true,
     })),
   };
+}
+
+// Drain every existing permission-aware page: sidebar search includes the entire accessible directory.
+export async function listNavigationProjects({ signal } = {}) {
+  const projects = new Map();
+  for (let page = 1; ; page++) {
+    signal?.throwIfAborted();
+    const result = await listProjects({ page, signal });
+    result.rows.forEach((project) => projects.set(project.id, project));
+    if (!result.rows.length || page * PROJECTS_PAGE_SIZE >= result.total) break;
+  }
+  return [...projects.values()].sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
 }

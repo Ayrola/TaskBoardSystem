@@ -14,6 +14,11 @@ const compiled = routes.map((route) => {
 });
 
 const listeners = new Set();
+const startListeners = new Set();
+export function onRouteStart(listener) {
+  startListeners.add(listener);
+  return () => startListeners.delete(listener);
+}
 let outlet = null;
 let current = null;
 let renderToken = 0;
@@ -137,6 +142,8 @@ async function render({ focus }) {
     }
   }
 
+  startListeners.forEach((listener) => listener({ path: url.pathname, params, access: route.access }));
+
   let page;
   try {
     page = await route.load();
@@ -251,5 +258,6 @@ export function startRouter(container) {
     renderToken++;
     unmountCurrent();
     listeners.clear();
+    startListeners.clear();
   };
 }

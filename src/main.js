@@ -1,3 +1,4 @@
+import { mountAppLayout } from './components/app-layout/app-layout.js';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.min.css';
 import './styles.css';
@@ -13,4 +14,5 @@ onAuthChange(({ userChanged }) => userChanged && clearToasts());
 
 mountHeader(document.getElementById('header'));
 mountFooter(document.getElementById('footer'));
+mountAppLayout(document.getElementById('navigation-shell'));
 startRouter(document.getElementById('app'));

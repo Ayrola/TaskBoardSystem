@@ -1,3 +1,4 @@
+import { notifyProjectsChanged } from './project-events.js';
 import { supabaseClient } from './supabase-client.js';
 import { isUuid } from '../utils/validation.js';
 
@@ -30,6 +31,7 @@ export function subscribeToBoard(projectId, handlers) {
     for (const [kind, event] of Object.entries(BOARD_EVENTS)) {
       channel.on('broadcast', { event }, (message) => {
         if (closed || message?.payload?.project_id !== projectId) return;
+        if (kind === 'access') notifyProjectsChanged();
         handlers.onNotify?.(kind);
       });
     }
