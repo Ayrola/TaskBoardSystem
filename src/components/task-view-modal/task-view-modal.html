@@ -13,6 +13,15 @@
         <div class="task-description" data-description></div>
         <p class="text-body-secondary fst-italic mb-0" data-no-description hidden>No description.</p>
 
+        <section class="mt-4" aria-labelledby="task-labels-heading" data-task-labels>
+          <h3 class="h6" id="task-labels-heading">Labels</h3>
+          <label class="form-label small" for="task-label-search">Find project labels</label>
+          <input type="search" class="form-control mb-2" id="task-label-search" maxlength="60" disabled />
+          <p class="small text-body-secondary">Select a checkbox to add a label; clear it to remove the label.</p>
+          <div role="alert" class="alert alert-danger py-2 small" hidden></div>
+          <p role="status" class="small text-body-secondary">Loading labels…</p>
+          <div data-label-list></div>
+        </section>
         <section class="mt-4" aria-labelledby="task-assignees-heading">
           <h3 class="h6" id="task-assignees-heading">Assignees</h3>
           <ul class="list-group mb-2" data-assignee-list aria-label="Current assignees"></ul>

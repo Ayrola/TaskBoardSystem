@@ -233,3 +233,22 @@ If a step fails the user sees which one, and pressing delete again continues (th
 Apply `supabase/migrations/20261022220000_task_assignees.sql` before running the updated client (`supabase db push`). Open a task to search project participants and assign or remove multiple responsible people. Cards show their names. Owners and current members can manage assignments; unrelated users cannot be assigned, even through direct API inserts. Removing a project member clears their assignments in the same transaction. Assignment changes refresh connected boards.
 
 Run `npm run test:assignees` for isolated PostgreSQL checks of the migration, participant directory, RLS, assignment eligibility, duplicate prevention, membership removal, and cascading task deletion. The test uses PGlite with minimal existing-schema fixtures; it does not connect to the deployed database or exercise concurrent transactions.
+
+
+### Project labels
+
+`/labels` lists accessible projects, their labels, and matching tasks (20 per page).
+Owners and admins create, rename, recolour and remove project labels. Owners, current
+members and admins can add/remove labels in task details. Cards display label names;
+black or white text is selected using WCAG relative luminance for at least 4.5:1 contrast.
+Task links open details even when the task is beyond the board's first loaded page.
+
+The `project_labels` migration enables RLS and uses an internally derived `project_id`
+on `task_labels` with composite foreign keys to both parents. Cross-project assignments
+and parent changes that would invalidate assignments are rejected by PostgreSQL,
+including privileged writes. Deleting a label removes its task assignments; deleting
+a task/project cascades its label data. Changes notify connected boards.
+
+Run `npm run test:labels` for isolated PostgreSQL authorization, consistency, pagination,
+cascade and colour contrast tests. These use PGlite, not the deployed database, and do
+not simulate concurrent sessions. Apply the new migration before deploying the client.

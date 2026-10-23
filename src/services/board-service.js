@@ -13,9 +13,10 @@ export const BOARD_RELOAD_LIMIT = 500;
 
 const byPositionThenId = (a, b) => a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-const TASK_COLUMNS = 'id, stage_id, title, description, position, done, created_at, updated_at';
+const TASK_COLUMNS = 'id, stage_id, title, description, position, done, created_at, updated_at, task_labels(project_labels(id, name, colour))';
 
 const mapTask = (task) => ({
+  labels: (task.task_labels ?? []).map((row) => row.project_labels).filter(Boolean),
   id: task.id,
   title: task.title,
   description: task.description ?? '',

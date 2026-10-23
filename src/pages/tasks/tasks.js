@@ -1,10 +1,11 @@
+import { labelBadge } from '../../utils/labels.js';
 import Sortable from 'sortablejs';
 import html from './tasks.html?raw';
 import './tasks.css';
 import { renderFragment, setText, htmlToExcerpt } from '../../utils/render.js';
 import { getBoard, fetchColumnTasks, BOARD_PAGE_SIZE } from '../../services/board-service.js';
 import { ProjectNotFoundError, getProject } from '../../services/projects-service.js';
-import { createTask, updateTask, deleteTask, moveTask, TaskNotFoundError, StalePlacementError } from '../../services/tasks-service.js';
+import { getTask, createTask, updateTask, deleteTask, moveTask, TaskNotFoundError, StalePlacementError } from '../../services/tasks-service.js';
 import { drainAttachmentCleanup } from '../../services/attachments-service.js';
 import { subscribeToBoard } from '../../services/board-realtime.js';
 import { onAuthChange } from '../../services/auth-service.js';
@@ -29,6 +30,7 @@ export function mount(container, ctx) {
   const cardTemplate = root.querySelector('[data-card-template]');
   const actions = root.querySelector('[data-actions]');
   let requestId = 0;
+  let linkedTaskOpened = false;
   // Bumped whenever cursors may have become invalid (a reload starts, a move, a realtime change). A page
   // request that finishes under an older epoch is discarded, so stale pages are never mixed into the board.
   let boardEpoch = 0;
@@ -104,6 +106,7 @@ export function mount(container, ctx) {
     const card = cardTemplate.content.firstElementChild.cloneNode(true);
     card.dataset.taskId = task.id;
     setText(card, '[data-task-title]', task.title);
+    card.querySelector('[data-task-labels]').append(...(task.labels ?? []).map(labelBadge));
     setText(card, '[data-task-assignees]', task.assignees?.length
       ? `Assigned: ${task.assignees.map((a) => a.label).join(', ')}` : 'Unassigned');
     const excerpt = htmlToExcerpt(task.description);
@@ -210,6 +213,7 @@ export function mount(container, ctx) {
     description.hidden = !project.description;
     root.querySelector('[data-link="edit"]').hidden = !project.canManage;
     root.querySelector('[data-link="users"]').hidden = !project.canManage;
+    root.querySelector('[data-link="labels"]').href = `/labels?project=${id}`;
     root.querySelector('[data-link="edit"]').href = `/projects/${id}/edit`;
     root.querySelector('[data-link="users"]').href = `/projects/${id}/users`;
     actions.hidden = false;
@@ -256,6 +260,10 @@ export function mount(container, ctx) {
       data = loaded;
       render(loaded);
       show('board');
+      if (ctx.query.task && !linkedTaskOpened) {
+        linkedTaskOpened = true;
+        openLinkedTask(ctx.query.task);
+      }
     } catch (error) {
       if (current !== requestId || ctx.signal.aborted) return;
       data = null;
@@ -481,6 +489,26 @@ export function mount(container, ctx) {
     else {
       flushPending();
       restoreFocus({ taskId });
+    }
+  }
+
+  async function openLinkedTask(taskId) {
+    try {
+      const task = await getTask(taskId, { signal: ctx.signal });
+      if (ctx.signal.aborted) return;
+      if (task.projectId !== data?.project.id) throw new TaskNotFoundError();
+      const stage = data.stages.find((candidate) => candidate.id === task.stageId);
+      if (!stage) throw new TaskNotFoundError();
+      await runFlow(async () => {
+        const found = { task, stage };
+        const action = await runDialog(() => openTaskViewModal({ ...found, projectId: task.projectId }));
+        if (ctx.signal.aborted) return false;
+        if (action === 'edit') return editTask(found);
+        if (action === 'delete') return removeTask(found);
+        return true;
+      }, { taskId });
+    } catch (error) {
+      if (!ctx.signal.aborted) showError(error.message);
     }
   }
 

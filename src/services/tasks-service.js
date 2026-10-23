@@ -103,3 +103,15 @@ export async function moveTask({ taskId, stageId, afterTaskId = null, toEnd = fa
     destCount: Number(data.dest_count),
   };
 }
+
+// Used by links from paginated label results, including tasks outside the board's loaded pages.
+export async function getTask(taskId, { signal } = {}) {
+  if (!isUuid(taskId)) throw new TaskNotFoundError();
+  let query = supabaseClient.from('tasks').select('id, project_id, stage_id, title, description, done, created_at, updated_at').eq('id', taskId).maybeSingle();
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query;
+  if (error) throw new Error('Could not load the task.');
+  if (!data) throw new TaskNotFoundError();
+  return { id: data.id, projectId: data.project_id, stageId: data.stage_id, title: data.title,
+    description: data.description ?? '', done: data.done, createdAt: data.created_at, updatedAt: data.updated_at };
+}

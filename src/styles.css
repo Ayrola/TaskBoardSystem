@@ -41,3 +41,5 @@ button:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+.project-label { max-width: 100%; line-height: 1.4; border: 1px solid currentColor; }

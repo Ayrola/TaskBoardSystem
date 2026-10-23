@@ -4,6 +4,7 @@ export const routes = [
   { path: '/', load: () => import('./pages/home/home.js') },
   { path: '/login', access: 'guest', load: () => import('./pages/login/login.js') },
   { path: '/dashboard', access: 'private', load: () => import('./pages/dashboard/dashboard.js') },
+  { path: '/labels', access: 'private', load: () => import('./pages/labels/labels.js') },
   { path: '/projects', access: 'private', load: () => import('./pages/projects/projects.js') },
   { path: '/projects/add', access: 'private', load: () => import('./pages/project-form/project-form.js') },
   { path: '/projects/:id/edit', access: 'private', load: () => import('./pages/project-form/project-form.js') },

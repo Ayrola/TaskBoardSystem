@@ -1,3 +1,4 @@
+import { setupTaskLabels } from './task-labels.js';
 import { listTaskAssignees, searchTaskAssignees, setTaskAssignee } from '../../services/assignees-service.js';
 import html from './task-view-modal.html?raw';
 import './task-view-modal.css';
@@ -37,9 +38,10 @@ const FILE_ICONS = {
 export function openTaskViewModal({ task, stage, projectId }) {
   const modal = mountModal(html, { dismissedValue: null });
   const { element, signal } = modal;
+  let labelBusy = false;
   let assignmentBusy = false;
   let attachmentBusy = false;
-  modal.setCanClose(() => !assignmentBusy && !attachmentBusy);
+  modal.setCanClose(() => !labelBusy && !assignmentBusy && !attachmentBusy);
 
   setText(element, '[data-task-title]', task.title);
   setText(element, '[data-stage-badge]', stage?.name ?? '');
@@ -64,6 +66,10 @@ export function openTaskViewModal({ task, stage, projectId }) {
   deleteButton.addEventListener('click', () => modal.close('delete'), { signal });
   element.addEventListener('shown.bs.modal', () => editButton.focus(), { signal });
 
+  setupTaskLabels(element, { taskId: task.id, projectId, signal, setBusy: (busy) => {
+    labelBusy = busy;
+    editButton.disabled = deleteButton.disabled = labelBusy || assignmentBusy || attachmentBusy;
+  } });
   setupAssignees();
   setupAttachments();
   setupComments();
@@ -149,8 +155,8 @@ export function openTaskViewModal({ task, stage, projectId }) {
         busy = false;
         assignmentBusy = false;
         if (!signal.aborted) {
-          editButton.disabled = attachmentBusy;
-          deleteButton.disabled = attachmentBusy;
+          editButton.disabled = attachmentBusy || labelBusy;
+          deleteButton.disabled = attachmentBusy || labelBusy;
           render();
         }
       }
@@ -438,8 +444,8 @@ export function openTaskViewModal({ task, stage, projectId }) {
       uploadIcon.hidden = active;
       uploadLabel.textContent = label;
       uploadButton.disabled = active;
-      editButton.disabled = active || assignmentBusy;
-      deleteButton.disabled = active || assignmentBusy;
+      editButton.disabled = active || assignmentBusy || labelBusy;
+      deleteButton.disabled = active || assignmentBusy || labelBusy;
       for (const button of list.querySelectorAll('button')) button.disabled = active;
     }
 

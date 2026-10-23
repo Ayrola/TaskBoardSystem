@@ -13,7 +13,8 @@
     "seed:loadtest:dry": "node scripts/seed-loadtest.js --dry-run",
     "seed:loadtest:cleanup": "node scripts/seed-loadtest.js --cleanup --confirm-dev",
     "bootstrap-admin": "node scripts/bootstrap-admin.js",
-    "test:assignees": "node scripts/test-task-assignees.mjs"
+    "test:assignees": "node scripts/test-task-assignees.mjs",
+    "test:labels": "node scripts/test-project-labels.mjs"
   },
   "keywords": [],
   "author": "",
