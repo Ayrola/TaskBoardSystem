@@ -80,3 +80,12 @@ Supabase URL settings reference: [Redirect URLs](https://supabase.com/docs/guide
 - `git diff --check` passed.
 
 No Render service was created, no DNS was changed, and no live Supabase settings or data were modified. Live registration/confirmation, session restoration on the new origin, attachment operations, real Realtime, administrator function CORS, and Render-hosted direct routes remain dashboard/deployed-site checks.
+
+
+## Deployment error: Cannot find module index.js
+
+If logs say the build succeeded and then show `Running 'node index.js'`, the service was created as a Node Web Service. This frontend has no Node entry point. The obsolete npm `main: index.js` metadata has been removed; this does not change an already configured Render start command.
+
+Create a new **Static Site** alongside the failed Web Service (or apply the Blueprint to create the static service). Choose `Ayrola/TaskBoardSystem`, branch `initial-setup`, leave Root Directory blank, use `npm ci && npm run build`, and publish `dist`. Copy only the public environment variables listed above and add the `/*` → `/index.html` Rewrite. Static Sites have no Start Command. An existing Node service cannot be converted by editing its start command or merely adding `render.yaml` to the repository. Verify the new generated URL before retiring the failed service, changing DNS, or updating canonical Auth settings.
+
+See [Render service selection](https://render.com/docs/your-first-deploy) and [runtime migration guidance](https://render.com/tutorials/web-service-vs-static-site/migration-paths).
