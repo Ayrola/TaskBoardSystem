@@ -1,4 +1,4 @@
-﻿# Taskboard
+# Taskboard
 
 A Trello-style application where users manage projects, stages and tasks.
 Built with vanilla JavaScript ES modules, Vite, Bootstrap and Supabase.
@@ -50,20 +50,18 @@ Records have deterministic IDs, so reruns skip anything that already exists. Exi
 keep their passwords, and no unrelated records are modified. Users are created as already
 confirmed, so no emails are sent.
 
-## Deploying to Netlify
+## Deploying to Render
 
-`netlify.toml` sets the build (`npm run build`, publish `dist`) and rewrites every path to
-`index.html` so deep links such as `/projects` work with the History API router.
+Use a **Render Static Site** with the repository-root `render.yaml`: branch `initial-setup`,
+build `npm ci && npm run build`, publish `dist`, and a `/*` → `/index.html` rewrite.
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in Render; they are public
+build-time values and changes require a new build. Supabase continues to host the existing
+Database, Auth, Storage and `admin-users` Edge Function. No application server is needed.
 
-Vite inlines `VITE_*` values at **build time**, and `.env` is git-ignored, so set them in
-Netlify under *Site configuration → Environment variables* (then trigger a new deploy):
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-
-Only the public URL and publishable key belong here. Never add the service role key to Netlify
-for this site. Afterwards, in Supabase *Authentication → URL Configuration*, set the Site URL to
-your Netlify URL and add it to the redirect URLs.
+Follow [the deployment, Supabase settings, verification, cutover and rollback guide](docs/render-deployment.md).
+It includes the required dashboard steps; adding this configuration does not deploy the site.
+`netlify.toml` is intentionally retained for the existing Netlify deployment and rollback until
+Render is verified. No Netlify Functions or additional Netlify headers/redirect files were found.
 
 ## Task attachments
 

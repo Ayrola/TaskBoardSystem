@@ -1,0 +1,24 @@
+# Frontend only. Supabase continues hosting Auth, Database, Storage and Edge Functions.
+services:
+  - type: web
+    name: taskboard
+    runtime: static
+    branch: initial-setup
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # npm ci above performs the dependency installation, including Vite dev dependencies.
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+    routes:
+      # Existing files take precedence on Render; preserve clean History API URLs.
+      - type: rewrite
+        source: /*
+        destination: /index.html
