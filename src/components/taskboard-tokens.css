@@ -1,7 +1,7 @@
 /* Shared tokens are scoped to board, task and navigation surfaces. */
 .app-sidebar, .page-tasks, .task-view-modal, .task-form-modal, .move-task-modal {
-  --tb-ink: #202b3c; --tb-muted: #596579; --tb-line: #dce2ea; --tb-surface: #fff;
-  --tb-canvas: #f5f7fa; --tb-accent: #405ad4; --tb-accent-soft: #eef1ff;
-  --tb-radius: 12px; --tb-space: 8px; --tb-shadow: 0 2px 6px #172b4d08;
+  --tb-ink: var(--app-text); --tb-muted: var(--app-muted); --tb-line: var(--app-border); --tb-surface: var(--app-card);
+  --tb-canvas: var(--app-column); --tb-accent: var(--app-accent); --tb-accent-soft: var(--app-selected);
+  --tb-radius: 12px; --tb-space: 8px; --tb-shadow: var(--app-shadow);
   color: var(--tb-ink);
 }

@@ -410,3 +410,11 @@ Project and membership mutations invalidate the in-memory directory. Existing bo
 On desktop, collapse creates an icon rail. On mobile, Bootstrap Offcanvas supplies the backdrop, Escape handling and focus trap; closing restores focus to the navigation opener. The board keeps its own horizontal scrolling area.
 
 Run `npm run test:sidebar:browser` with local Vite and an isolated Chrome DevTools session (defaults: `127.0.0.1:5173` and `127.0.0.1:9223`). It uses synthetic API responses to check paginated search, empty/error states, permission links, directory refresh, persistent layout, history, collapse, mobile drawer/focus, account switching and logout. `npm run test:board:browser` covers board regressions. Neither browser suite writes to Supabase.
+
+### Colour themes
+
+Choose **Light**, **Dark** or **System** in the sidebar account area (an icon stack when collapsed), or in the public-page footer. System is the default and follows OS changes. Only explicit Light/Dark preferences are stored under `taskboard:theme`; System removes that override. Choices synchronize across tabs and remain after logout. If storage is unavailable, the choice works for the current page lifetime.
+
+`public/theme.js` is the single theme service and a blocking head script, so it sets Bootstrap 5.3's root `data-bs-theme` and native `color-scheme` before rendering. The application uses its subscription API through `src/services/theme-service.js`. Semantic palettes live in `src/styles.css`; board tokens reference them. Quill Snow toolbar/link-editor colours and Sortable drag states use these tokens. Label foregrounds continue to be selected by their existing contrast calculation. No data, permissions or theme-resolved OS values are stored as preferences.
+
+Checks: `npm run test:theme` covers preferences, storage errors, media/storage events, subscription cleanup and semantic palette AA text contrast. With local Chrome DevTools available, `BOARD_APP_URL=http://127.0.0.1:4173 npm run test:theme:browser` checks the production preview, including real cross-tab updates and desktop/mobile screenshots. `BOARD_DARK=1` or `BOARD_LIGHT=1` with `npm run test:board:browser` exercises the board in each system theme. Browser suites use synthetic Supabase data; they do not prove live backend behavior or constitute a full accessibility audit.

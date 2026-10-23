@@ -1,15 +1,15 @@
 @import './taskboard-tokens.css';
 /* Shared task surfaces; deliberately scoped to task dialogs. */
 
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-content { border: 1px solid var(--tb-line); border-radius: 14px; box-shadow: 0 16px 80px #172b4d26; overflow: hidden; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-content { border: 1px solid var(--tb-line); border-radius: 14px; box-shadow: var(--app-shadow-raised); overflow: hidden; }
 :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-header { align-items: flex-start; padding: 20px 24px; border-color: var(--tb-line); }
 :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-title { font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; line-height: 1.4; overflow-wrap: anywhere; }
 :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-header .btn-close { flex-shrink: 0; margin-left: auto; min-width: 20px; min-height: 20px; }
 :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-body { padding: 24px; overscroll-behavior-y: contain; }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-footer { padding: 14px 24px; background: #f8fafc; border-color: var(--tb-line); gap: 8px; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-footer { padding: 14px 24px; background: var(--app-column); border-color: var(--tb-line); gap: 8px; }
 :is(.task-view-modal,.task-form-modal,.move-task-modal) .btn { border-radius: 7px; font-size: .82rem; min-height: 36px; }
 :is(.task-view-modal,.task-form-modal,.move-task-modal) .btn-primary { background: var(--tb-accent); border-color: var(--tb-accent); }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) :is(input,select,textarea):focus { border-color: #7687dd; box-shadow: 0 0 0 3px #405ad41a; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal) :is(input,select,textarea):focus { border-color: var(--app-focus); box-shadow: var(--app-focus-ring); }
 :is(.task-view-modal,.task-form-modal,.move-task-modal) :is(button,a,input,select,textarea,summary):focus-visible { outline: 3px solid var(--tb-accent); outline-offset: 2px; }
 :is(.task-view-modal,.task-form-modal) .task-dialog-eyebrow { color: var(--tb-muted); font-size: .68rem; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; margin: 0 0 5px; }
 .task-view-modal .modal-dialog { max-width: 1000px; }
@@ -19,7 +19,7 @@
 .task-view-modal .task-detail-sidebar > section:first-child { margin-top: 0 !important; }
 .task-view-modal .task-detail-main > section + section { padding-top: 22px; border-top: 1px solid var(--tb-line); }
 .task-view-modal h3 { font-size: .8rem; font-weight: 650; margin-bottom: 12px; }
-.task-view-modal .task-description { font-size: .88rem; line-height: 1.75; color: #344258; }
+.task-view-modal .task-description { font-size: .88rem; line-height: 1.75; color: var(--app-secondary); }
 .task-view-modal .task-description-heading { margin-top: 22px; }
 .task-view-modal .task-detail-sidebar :is(input,select,.list-group-item) { font-size: .77rem; }
 .task-view-modal .task-detail-sidebar .list-group-item { padding: 8px; }

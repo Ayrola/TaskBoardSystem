@@ -43,3 +43,75 @@ button:focus-visible {
 }
 
 .project-label { max-width: 100%; line-height: 1.4; border: 1px solid currentColor; }
+
+/* Semantic application palette; Bootstrap continues to style standard controls. */
+:root, [data-bs-theme="light"] {
+  color-scheme: light;
+  --app-page:#ffffff; --app-sidebar:#f7f8fa; --app-column:#f2f4f8; --app-card:#ffffff; --app-elevated:#ffffff;
+  --app-text:#202b3c; --app-secondary:#344258; --app-muted:#596579; --app-border:#dce2ea; --app-divider:#e3e7ee;
+  --app-accent:#405ad4; --app-link:#244db4; --app-hover:#e9edf3; --app-selected:#eef1ff; --app-focus:#405ad4;
+  --app-success:#28664a; --app-warning:#79591b; --app-danger:#b42331; --app-info:#354f7e;
+  --app-shadow:0 2px 6px #172b4d0d; --app-shadow-raised:0 12px 36px #172b4d26; --app-focus-ring:0 0 0 3px #405ad433;
+  --app-button-bg:#405ad4; --app-button-hover:#3249b7; --app-button-text:#ffffff;
+  --bs-body-bg:var(--app-page); --bs-body-color:var(--app-text); --bs-border-color:var(--app-border);
+}
+[data-bs-theme="dark"] {
+  color-scheme:dark;
+  --app-page:#111923; --app-sidebar:#16212e; --app-column:#1b2735; --app-card:#223143; --app-elevated:#28394c;
+  --app-text:#e7edf5; --app-secondary:#c9d5e4; --app-muted:#aebdd0; --app-border:#475b72; --app-divider:#35485e;
+  --app-accent:#a5b7ff; --app-link:#a9c5ff; --app-hover:#304359; --app-selected:#293b60; --app-focus:#b5c6ff;
+  --app-success:#8bd5b0; --app-warning:#f2ce85; --app-danger:#ffa5ae; --app-info:#a9c5ff;
+  --app-shadow:0 2px 8px #00000026; --app-shadow-raised:0 12px 36px #00000066; --app-focus-ring:0 0 0 3px #a5b7ff55;
+  --app-button-bg:#a5b7ff; --app-button-hover:#c0cdff; --app-button-text:#17213c;
+  --bs-body-bg:var(--app-page); --bs-body-color:var(--app-text); --bs-emphasis-color:var(--app-text);
+  --bs-secondary-color:var(--app-muted); --bs-secondary-bg:var(--app-card); --bs-tertiary-bg:var(--app-column);
+  --bs-border-color:var(--app-border); --bs-link-color:var(--app-link); --bs-link-color-rgb:169,197,255;
+  --bs-link-hover-color:#ceddff; --bs-link-hover-color-rgb:206,221,255;
+}
+body { background-color:var(--app-page); color:var(--app-text); }
+.theme-selector { display:flex; gap:3px; padding:4px; border:1px solid var(--app-border); border-radius:7px; margin:0 0 10px; }
+.theme-selector button { flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:7px 5px; min-height:36px; border:1px solid transparent; border-radius:4px; background:transparent; color:var(--app-muted); font-size:11px; }
+.theme-selector button:hover { background:var(--app-hover); color:var(--app-text); }
+.theme-selector button[aria-pressed="true"] { color:var(--app-link); background:var(--app-selected); border-color:var(--app-accent); font-weight:600; }
+.theme-selector button:focus-visible { outline:3px solid var(--app-focus); outline-offset:2px; }
+.footer-theme { display:inline-flex; margin:10px 0 0 16px; vertical-align:middle; }
+.has-workspace .footer-theme { display:none; }
+@media(min-width:768px) {
+ .sidebar-collapsed .theme-selector { flex-direction:column; padding:2px; }
+ .sidebar-collapsed .theme-label { display:none; }
+}
+@media(max-width:767.98px) { .theme-selector button { min-height:44px; } }
+/* Custom task primary buttons need distinct foregrounds from link accents. */
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.page-tasks) .btn-primary {
+ --bs-btn-bg:var(--app-button-bg); --bs-btn-border-color:var(--app-button-bg); --bs-btn-color:var(--app-button-text);
+ --bs-btn-hover-bg:var(--app-button-hover); --bs-btn-hover-border-color:var(--app-button-hover); --bs-btn-hover-color:var(--app-button-text);
+ background-color:var(--app-button-bg); border-color:var(--app-button-bg); color:var(--app-button-text);
+}
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.page-tasks) .btn-primary:hover { background-color:var(--app-button-hover); border-color:var(--app-button-hover); }
+/* Quill Snow has fixed light colours; these selectors only affect our task editors. */
+:is(.task-view-modal,.task-form-modal) :is(.ql-toolbar.ql-snow,.ql-container.ql-snow) { background:var(--app-card); color:var(--app-text); border-color:var(--app-border); }
+:is(.task-view-modal,.task-form-modal) .ql-snow .ql-stroke { stroke:var(--app-secondary); }
+:is(.task-view-modal,.task-form-modal) .ql-snow .ql-fill { fill:var(--app-secondary); }
+:is(.task-view-modal,.task-form-modal) .ql-snow .ql-picker { color:var(--app-secondary); }
+:is(.task-view-modal,.task-form-modal) .ql-editor.ql-blank::before { color:var(--app-muted); }
+:is(.task-view-modal,.task-form-modal) .ql-snow .ql-tooltip { background:var(--app-elevated); color:var(--app-text); border-color:var(--app-border); box-shadow:var(--app-shadow-raised); max-width:100%; white-space:normal; z-index:2; }
+:is(.task-view-modal,.task-form-modal) .ql-snow .ql-tooltip input { background:var(--app-card); color:var(--app-text); border-color:var(--app-border); max-width:100%; }
+:is(.task-view-modal,.task-form-modal) .ql-snow :is(a,.ql-tooltip a) { color:var(--app-link); }
+:is(.task-view-modal,.task-form-modal) .ql-snow button:hover .ql-stroke,
+:is(.task-view-modal,.task-form-modal) .ql-snow button.ql-active .ql-stroke { stroke:var(--app-accent); }
+:is(.task-view-modal,.task-form-modal) .ql-snow button:hover .ql-fill,
+:is(.task-view-modal,.task-form-modal) .ql-snow button.ql-active .ql-fill { fill:var(--app-accent); }
+:is(.task-view-modal,.task-form-modal) .ql-toolbar button:focus-visible { outline:3px solid var(--app-focus); outline-offset:1px; }
+[data-bs-theme="dark"] .text-danger { --bs-danger-rgb:255,165,174; }
+[data-bs-theme="dark"] .text-success { --bs-success-rgb:139,213,176; }
+[data-bs-theme="dark"] .text-primary { --bs-primary-rgb:169,197,255; }
+[data-bs-theme="dark"] .btn-outline-primary { --bs-btn-color:var(--app-link); --bs-btn-border-color:var(--app-border); --bs-btn-hover-bg:var(--app-button-bg); --bs-btn-hover-border-color:var(--app-button-bg); --bs-btn-hover-color:var(--app-button-text); }
+a:focus-visible, button:focus-visible { outline-color:var(--app-focus); }
+.card { --bs-card-bg:var(--app-card); --bs-card-border-color:var(--app-border); }
+.modal { --bs-modal-bg:var(--app-elevated); --bs-modal-color:var(--app-text); }
+.dropdown-menu { --bs-dropdown-bg:var(--app-elevated); --bs-dropdown-color:var(--app-text); --bs-dropdown-link-color:var(--app-text); --bs-dropdown-link-hover-bg:var(--app-hover); --bs-dropdown-link-hover-color:var(--app-text); }
+.toast { --bs-toast-bg:var(--app-elevated); --bs-toast-color:var(--app-text); --bs-toast-header-bg:var(--app-column); --bs-toast-header-color:var(--app-secondary); }
+.sidebar-search input::placeholder { color:var(--app-muted); opacity:1; }
+[data-bs-theme="dark"] .btn-outline-danger { --bs-btn-color:var(--app-danger); --bs-btn-border-color:var(--app-danger); }
+[data-bs-theme="dark"] .btn-outline-secondary { --bs-btn-color:var(--app-muted); --bs-btn-border-color:var(--app-border); --bs-btn-hover-bg:var(--app-hover); --bs-btn-hover-border-color:var(--app-muted); --bs-btn-hover-color:var(--app-text); }
+[data-bs-theme="dark"] :is(.form-control,.form-select):disabled { color:var(--app-muted); background-color:var(--app-column); }

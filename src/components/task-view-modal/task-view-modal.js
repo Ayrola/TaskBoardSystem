@@ -1,3 +1,4 @@
+import { mountDeadlinePicker } from '../deadline-picker/deadline-picker.js';
 import '../task-dialog.css';
 import { setupTaskChecklist } from './task-checklist.js';
 import { renderTaskDeadline, browserTimezone, toLocalDeadlineInput, deadlineFromEditor } from '../../utils/deadlines.js';
@@ -58,15 +59,16 @@ export function openTaskViewModal({ task, stage, stages, projectId, onSave }) {
   const originalStageId = task.stageId ?? stage?.id;
   stageInput.value = originalStageId;
   const deadlineInput = element.querySelector('[data-deadline-input]');
-  const clearDeadline = element.querySelector('[data-clear-deadline]');
   deadlineInput.value = toLocalDeadlineInput(task.dueAt);
   setText(element, '[data-deadline-help]', `Local time (${browserTimezone()}). Repeated times when clocks go back use the first occurrence; unchanged deadlines keep their original instant.`);
   stageInput.addEventListener('change', () => {
     element.querySelector('[data-stage-hint]').hidden = stageInput.value === originalStageId;
   }, { signal });
-  clearDeadline.addEventListener('click', () => {
-    deadlineInput.value = ''; setText(element, '[data-deadline-error]', ''); deadlineInput.focus();
-  }, { signal });
+  const deadlinePicker = mountDeadlinePicker(deadlineInput, { signal, onChange: () => {
+    setText(element, '[data-deadline-error]', '');
+    deadlineInput.classList.remove('is-invalid');
+    deadlineInput.setAttribute('aria-invalid', 'false');
+  } });
   const deadline = element.querySelector('[data-deadline]');
   renderTaskDeadline(deadline, task);
   const deadlineTimer = setInterval(() => renderTaskDeadline(deadline, task), 30000);
@@ -129,7 +131,8 @@ export function openTaskViewModal({ task, stage, stages, projectId, onSave }) {
   }, { signal });
   function setSaving(busy) {
     titleInput.readOnly = busy; editor.enable(!busy);
-    stageInput.disabled = deadlineInput.disabled = clearDeadline.disabled = busy;
+    stageInput.disabled = deadlineInput.disabled = busy;
+    deadlinePicker.setDisabled(busy);
     saveButton.disabled = deleteButton.disabled = busy || checklistBusy || labelBusy || assignmentBusy || attachmentBusy;
     element.querySelector('[data-save-spinner]').hidden = !busy;
     element.setAttribute('aria-busy', String(busy));

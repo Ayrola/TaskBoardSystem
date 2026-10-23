@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkBoardBrowser } from './fixtures/board-browser-checks.mjs';
+import { checkThemeBrowser } from './fixtures/theme-browser-checks.mjs';
 import { checkSidebarBrowser } from './fixtures/sidebar-browser-checks.mjs';
 const debugUrl = new URL(process.env.BOARD_CDP_URL ?? 'http://127.0.0.1:9223');
 const appUrl = new URL(process.env.BOARD_APP_URL ?? 'http://127.0.0.1:5173');
@@ -41,13 +42,18 @@ const saveScreenshot=async name=>{
 };
 try {
   await send('Runtime.enable'); await send('Page.enable');
+  if (process.env.BOARD_CHECK_THEME || process.env.BOARD_DARK || process.env.BOARD_LIGHT) await send('Storage.clearDataForOrigin',{origin:appUrl.origin,storageTypes:'local_storage'});
+  if (process.env.BOARD_LIGHT) await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'light'}]});
+  if (process.env.BOARD_CHECK_THEME || process.env.BOARD_DARK) await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'dark'}]});
   await send('Page.addScriptToEvaluateOnNewDocument',{source:`window.__boardPreview=${JSON.stringify({host:api.host,ref:api.hostname.split('.')[0]})};\n${readFileSync(new URL('./fixtures/board-browser-mock.js',import.meta.url),'utf8')}`});
   await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await send('Page.navigate',{url:new URL('/projects/00000000-0000-0000-0000-000000000010/tasks',appUrl).href});
   await wait(`document.querySelectorAll('.task-card').length===53 && document.querySelector('[data-live-status]').textContent==='Live updates connected'`);
+  if(process.env.BOARD_LIGHT && await evaluate(`document.documentElement.dataset.bsTheme!=='light'`))throw Error('Expected light theme.');
+  if(process.env.BOARD_DARK && await evaluate(`document.documentElement.dataset.bsTheme!=='dark'`))throw Error('Expected dark theme.');
   if(await evaluate(`document.documentElement.scrollWidth>innerWidth`))throw Error('Desktop page overflow.');
   await saveScreenshot('desktop.png');
-  await (process.env.BOARD_CHECK_SIDEBAR ? checkSidebarBrowser : checkBoardBrowser)({evaluate,send,wait,saveScreenshot,errors});
+  await (process.env.BOARD_CHECK_THEME ? checkThemeBrowser : process.env.BOARD_CHECK_SIDEBAR ? checkSidebarBrowser : checkBoardBrowser)({evaluate,send,wait,saveScreenshot,errors,debugUrl,appUrl});
   console.log(`Screenshots: ${outputDir}`);
 } catch(error) {
   await saveScreenshot('failure.png').catch(()=>{});

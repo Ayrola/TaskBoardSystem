@@ -53,3 +53,9 @@ export function renderTaskDeadline(element, task) {
   element.classList.toggle('text-danger', overdue);
   element.classList.toggle('fw-semibold', overdue);
 }
+
+// Local calendar getters intentionally avoid UTC conversion, including around midnight.
+export function todayDeadlineInput(value, type = 'datetime-local', now = new Date()) {
+  const date = `${String(now.getFullYear()).padStart(4, '0')}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return type === 'date' ? date : `${date}T${value.split('T')[1] || '17:00'}`;
+}

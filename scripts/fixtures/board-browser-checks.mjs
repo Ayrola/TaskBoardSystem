@@ -21,6 +21,20 @@ await change('[data-search]','does not exist');await wait(`document.querySelecto
 await click('[data-clear-filters]');
 await click('[data-description-toggle]');assert(await evaluate(`document.querySelector('[data-project-description]').classList.contains('is-expanded')`),'Description expands');await click('[data-description-toggle]');
 await click('.task-card [data-open-task]');await wait(`document.querySelector('.task-view-modal.show') && document.activeElement.matches('#task-view-title-input')`);
+// Shared Today control updates only the deadline draft until Save.
+await evaluate(`window.__todaySaveCount=__boardMock.calls.filter(c=>c.path==='update_task_with_deadline').length;document.querySelector('#task-view-deadline').value='2020-01-01T09:45';document.querySelector('.task-view-modal [data-deadline-today]').click()`);
+assert(await evaluate(`(()=>{const d=new Date();const local=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');return document.querySelector('#task-view-deadline').value===local+'T09:45' && __boardMock.calls.filter(c=>c.path==='update_task_with_deadline').length===__todaySaveCount;})()`),'Today preserves time without saving');
+await click('.task-view-modal [data-clear-deadline]');await click('.task-view-modal [data-deadline-today]');
+assert(await evaluate(`document.querySelector('#task-view-deadline').value.endsWith('T17:00')`),'Empty deadline defaults to 17:00');
+await click('.task-view-modal [data-bs-dismiss="modal"]');await settled();
+assert(await evaluate(`__boardMock.calls.filter(c=>c.path==='update_task_with_deadline').length===__todaySaveCount`),'Cancel does not save Today');
+await click('.task-card [data-open-task]');await wait(`document.activeElement.matches('#task-view-title-input')`);
+await click('.task-view-modal [data-deadline-today]');await evaluate(`window.__todayExpected=document.querySelector('#task-view-deadline').value;window.__todayTitle=document.querySelector('#task-view-title-input').value`);
+await click('.task-view-modal [data-action="save"]');await settled();
+assert(await evaluate(`__boardMock.tasks.find(t=>t.title===__todayTitle).due_at===new Date(__todayExpected).toISOString()`),'Today persists through existing Save conversion');
+await send('Page.reload',{ignoreCache:true});await wait(`document.querySelectorAll('.task-card').length===53`);
+await click('.task-card [data-open-task]');await wait(`document.activeElement.matches('#task-view-title-input')`);
+assert(await evaluate(`document.querySelector('#task-view-deadline').value.endsWith('T17:00')`),'Saved Today time survives reload');
 assert(await evaluate(`document.querySelectorAll('.modal.show').length===1 && document.querySelector('.task-detail-sidebar')!==null`),'Grouped task view');
 await saveScreenshot('task-details.png');
 assert(await evaluate(`!document.querySelector('.task-view-modal [data-action="edit"]') && !!document.querySelector('.task-view-modal [data-action="save"]')`),'Save replaces Edit in task details');
@@ -42,7 +56,7 @@ await change('#task-view-stage','00000000-0000-0000-0000-000000000011','change')
 await click('.task-view-modal [data-action="save"]');await settled();
 assert(await evaluate(`window.__boardMock.tasks.find(task=>task.title==='A preserved edit').due_at===null`),'Deadline can be cleared in the popup');
 await change('[data-filter="status"]','open','change');
-await click('[data-add-primary]');await wait(`document.querySelector('.task-form-modal.show')`);await change('#task-title','New board task');await click('.task-form-modal [data-submit]');await settled();
+await click('[data-add-primary]');await wait(`document.querySelector('.task-form-modal.show') && document.activeElement.matches('#task-title')`);await click('.task-form-modal [data-deadline-today]');assert(await evaluate(`document.querySelector('#task-deadline').value.endsWith('T17:00') && document.querySelector('.task-form-modal.show')!==null`),'Create form Today updates draft without submitting');await change('#task-title','New board task');await click('.task-form-modal [data-submit]');await settled();
 assert(await evaluate(`document.querySelector('[data-filter="status"]').value==='open'`),'Filters survive CRUD');
 assert(await evaluate(`window.__boardMock.tasks.some(t=>t.title==='New board task')`),'Created task');
 await click('[data-clear-filters]');

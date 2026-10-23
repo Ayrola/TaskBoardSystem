@@ -1,3 +1,4 @@
+import { mountThemeSelector } from '../theme-selector/theme-selector.js';
 import Offcanvas from 'bootstrap/js/dist/offcanvas';
 import html from './app-layout.html?raw';
 import '../taskboard-tokens.css';
@@ -9,6 +10,7 @@ import { showError } from '../../services/toast-service.js';
 
 export function mountAppLayout(container) {
   container.innerHTML = html;
+  const stopTheme = mountThemeSelector(container.querySelector('[data-theme-selector]'));
   const sidebar = container.querySelector('.app-sidebar');
   const list = container.querySelector('.sidebar-projects');
   const search = container.querySelector('input');
@@ -149,7 +151,7 @@ export function mountAppLayout(container) {
   media.addEventListener('change', onMedia); window.addEventListener('focus', onFocus); document.addEventListener('visibilitychange', onVisible);
   const poll = setInterval(() => { if (!document.hidden) refresh(); }, 60000);
   return () => {
-    disposed = true; active = false; controller?.abort(); generation++; clearTimeout(timer); clearInterval(poll); stops.forEach((stop) => stop());
+    stopTheme(); disposed = true; active = false; controller?.abort(); generation++; clearTimeout(timer); clearInterval(poll); stops.forEach((stop) => stop());
     container.removeEventListener('click', onClick); search.removeEventListener('input', onSearch);
     sidebar.removeEventListener('shown.bs.offcanvas', onShown); sidebar.removeEventListener('hidden.bs.offcanvas', onHidden);
     media.removeEventListener('change', onMedia); window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisible);

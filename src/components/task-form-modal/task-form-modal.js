@@ -1,3 +1,4 @@
+import { mountDeadlinePicker } from '../deadline-picker/deadline-picker.js';
 import '../task-dialog.css';
 import { browserTimezone, toLocalDeadlineInput, deadlineFromEditor } from '../../utils/deadlines.js';
 import { createTaskDescriptionEditor } from '../task-description-editor.js';
@@ -24,13 +25,9 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
   const titleInput = form.elements.title;
   const stageSelect = form.elements.stage;
   const deadlineInput = form.elements.deadline;
-  const clearDeadline = element.querySelector('[data-clear-deadline]');
   deadlineInput.value = toLocalDeadlineInput(task?.dueAt);
   setText(element, '[data-deadline-help]', `Local time (${browserTimezone()}). Repeated times when clocks go back use the first occurrence; unchanged deadlines keep their original instant.`);
-  clearDeadline.addEventListener('click', () => {
-    deadlineInput.value = ''; setFieldError('deadline', null); deadlineInput.focus();
-  }, { signal });
-  deadlineInput.addEventListener('input', () => setFieldError('deadline', null), { signal });
+  const deadlinePicker = mountDeadlinePicker(deadlineInput, { signal, onChange: () => setFieldError('deadline', null) });
   const formError = element.querySelector('[data-form-error]');
   const submitButton = element.querySelector('[data-submit]');
   const cancelButton = element.querySelector('[data-cancel]');
@@ -92,7 +89,7 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
     titleInput.readOnly = value;
     stageSelect.disabled = value;
     deadlineInput.disabled = value;
-    clearDeadline.disabled = value;
+    deadlinePicker.setDisabled(value);
     quill.enable(!value);
     element.setAttribute('aria-busy', String(value));
   }
