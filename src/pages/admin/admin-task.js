@@ -9,7 +9,7 @@ import {
   getAdminTask,
   listAllProjectStages,
 } from '../../services/admin-service.js';
-import { deleteTask, updateTask, TaskNotFoundError } from '../../services/tasks-service.js';
+import { deleteTask, saveTaskForm, TaskNotFoundError } from '../../services/tasks-service.js';
 import { openConfirmDialog } from '../../components/confirm-dialog/confirm-dialog.js';
 import { openTaskFormModal } from '../../components/task-form-modal/task-form-modal.js';
 import { showSuccess, showInfo } from '../../services/toast-service.js';
@@ -30,6 +30,7 @@ export function mount(container, ctx) {
   let loadId = 0;
   let dialog = null;
   let editor = null;
+  ctx.setLeaveGuard(() => editor?.canLeave?.() ?? true);
 
   function setLink(selector, href, label) {
     const link = root.querySelector(selector);
@@ -40,11 +41,12 @@ export function mount(container, ctx) {
   async function openEditor(stages) {
     editor = openTaskFormModal({
       mode: 'edit',
+      projectId: task.projectId,
       stages: stages.map((stage) => ({ id: stage.id, name: stage.name })),
       task: { id: task.id, title: task.title, description: task.description, stageId: task.stageId, dueAt: task.dueAt },
       onSubmit: async (values) => {
         try {
-          await updateTask(task.id, values);
+          await saveTaskForm({projectId:task.projectId,taskId:task.id,...values});
         } catch (error) {
           if (error instanceof TaskNotFoundError) throw new Error('This task no longer exists.');
           throw error;

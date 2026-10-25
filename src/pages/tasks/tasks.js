@@ -7,7 +7,7 @@ import './tasks.css';
 import { renderFragment, setText, htmlToExcerpt } from '../../utils/render.js';
 import { getBoard, fetchColumnTasks, BOARD_PAGE_SIZE } from '../../services/board-service.js';
 import { ProjectNotFoundError, getProject } from '../../services/projects-service.js';
-import { getTask, createTask, updateTask, deleteTask, moveTask, TaskNotFoundError, StalePlacementError } from '../../services/tasks-service.js';
+import { getTask, saveTaskForm, deleteTask, moveTask, TaskNotFoundError, StalePlacementError } from '../../services/tasks-service.js';
 import { drainAttachmentCleanup } from '../../services/attachments-service.js';
 import { subscribeToBoard } from '../../services/board-realtime.js';
 import { onAuthChange } from '../../services/auth-service.js';
@@ -591,8 +591,7 @@ export function mount(container, ctx) {
 
   async function save(taskId, values) {
     try {
-      if (taskId) await updateTask(taskId, values);
-      else await createTask({ projectId: data.project.id, ...values });
+      await saveTaskForm({ projectId: data.project.id, taskId, ...values });
     } catch (error) {
       if (error instanceof TaskNotFoundError) {
         stale = true;
@@ -607,6 +606,7 @@ export function mount(container, ctx) {
     runDialog(() =>
       openTaskFormModal({
         mode: 'add',
+        projectId: data.project.id,
         stages: data.stages,
         stageId,
         onSubmit: (values) => save(null, values),
@@ -617,6 +617,7 @@ export function mount(container, ctx) {
     runDialog(() =>
       openTaskFormModal({
         mode: 'edit',
+        projectId: data.project.id,
         stages: data.stages,
         task: found.task,
         onSubmit: (values) => save(found.task.id, values),

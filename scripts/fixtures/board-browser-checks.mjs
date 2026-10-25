@@ -1,5 +1,6 @@
 import { checkWholeCardDrag } from './task-card-drag-checks.mjs';
 export async function checkBoardBrowser({ evaluate, send, wait, saveScreenshot, errors }) {
+await evaluate(`window.confirm=()=>true`);
 const assert=(value,message)=>{if(!value)throw new Error(message);};
 const click=selector=>evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
 const change=(selector,value,event='input')=>evaluate(`(()=>{const input=document.querySelector(${JSON.stringify(selector)});input.value=${JSON.stringify(value)};input.dispatchEvent(new Event(${JSON.stringify(event)},{bubbles:true}));})()`);
@@ -23,12 +24,12 @@ await click('[data-clear-filters]');
 await click('[data-description-toggle]');assert(await evaluate(`document.querySelector('[data-project-description]').classList.contains('is-expanded')`),'Description expands');await click('[data-description-toggle]');
 await click('.task-card [data-open-task]');await wait(`document.querySelector('.task-view-modal.show') && document.activeElement.matches('#task-view-title-input')`);
 // Shared Today control updates only the deadline draft until Save.
-await evaluate(`window.__todaySaveCount=__boardMock.calls.filter(c=>c.path==='update_task_with_deadline').length;document.querySelector('#task-view-deadline').value='2020-01-01T09:45';document.querySelector('.task-view-modal [data-deadline-today]').click()`);
-assert(await evaluate(`(()=>{const d=new Date();const local=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');return document.querySelector('#task-view-deadline').value===local+'T09:45' && __boardMock.calls.filter(c=>c.path==='update_task_with_deadline').length===__todaySaveCount;})()`),'Today preserves time without saving');
+await evaluate(`window.__todaySaveCount=__boardMock.calls.filter(c=>c.path==='save_task_form').length;document.querySelector('#task-view-deadline').value='2020-01-01T09:45';document.querySelector('.task-view-modal [data-deadline-today]').click()`);
+assert(await evaluate(`(()=>{const d=new Date();const local=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');return document.querySelector('#task-view-deadline').value===local+'T09:45' && __boardMock.calls.filter(c=>c.path==='save_task_form').length===__todaySaveCount;})()`),'Today preserves time without saving');
 await click('.task-view-modal [data-clear-deadline]');await click('.task-view-modal [data-deadline-today]');
 assert(await evaluate(`document.querySelector('#task-view-deadline').value.endsWith('T17:00')`),'Empty deadline defaults to 17:00');
 await click('.task-view-modal [data-bs-dismiss="modal"]');await settled();
-assert(await evaluate(`__boardMock.calls.filter(c=>c.path==='update_task_with_deadline').length===__todaySaveCount`),'Cancel does not save Today');
+assert(await evaluate(`__boardMock.calls.filter(c=>c.path==='save_task_form').length===__todaySaveCount`),'Cancel does not save Today');
 await click('.task-card [data-open-task]');await wait(`document.activeElement.matches('#task-view-title-input')`);
 await click('.task-view-modal [data-deadline-today]');await evaluate(`window.__todayExpected=document.querySelector('#task-view-deadline').value;window.__todayTitle=document.querySelector('#task-view-title-input').value`);
 await click('.task-view-modal [data-action="save"]');await settled();
@@ -49,7 +50,7 @@ assert(await evaluate(`document.querySelector('#task-view-title-input').value===
 assert(await evaluate(`document.querySelector('#task-view-stage').value==='00000000-0000-0000-0000-000000000013' && document.querySelector('#task-view-deadline').value==='2027-04-05T10:30'`),'Failed save preserves stage and deadline');
 await evaluate(`window.__boardMock.failSave=false`);await click('.task-view-modal [data-action="save"]');await settled();
 assert(await evaluate(`[...document.querySelectorAll('[data-task-title]')].some(e=>e.textContent==='A preserved edit')`),'Saved inline edit visible');
-assert(await evaluate(`(()=>{const call=window.__boardMock.calls.filter(c=>c.path==='update_task_with_deadline').at(-1);return call.body.p_stage_id==='00000000-0000-0000-0000-000000000013' && call.body.p_due_at===new Date('2027-04-05T10:30').toISOString() && call.body.p_description.includes('inline description edit');})()`),'Inline save sends stage, deadline, title and description together');
+assert(await evaluate(`(()=>{const call=window.__boardMock.calls.filter(c=>c.path==='save_task_form').at(-1);return call.body.p_values.stage_id==='00000000-0000-0000-0000-000000000013' && call.body.p_values.due_at===new Date('2027-04-05T10:30').toISOString() && call.body.p_values.description.includes('inline description edit');})()`),'Inline save sends stage, deadline, title and description together');
 await evaluate(`[...document.querySelectorAll('.task-card')].find(card=>card.querySelector('[data-task-title]').textContent==='A preserved edit').querySelector('[data-open-task]').click()`);
 await wait(`document.querySelector('.task-view-modal.show') && document.activeElement.matches('#task-view-title-input')`);
 assert(await evaluate(`document.querySelector('#task-view-stage').value==='00000000-0000-0000-0000-000000000013' && document.querySelector('#task-view-deadline').value==='2027-04-05T10:30'`),'Stage and deadline restored when reopening');

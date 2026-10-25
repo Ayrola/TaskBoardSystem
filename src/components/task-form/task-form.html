@@ -1,10 +1,12 @@
 <div class="modal fade task-view-modal" tabindex="-1" aria-labelledby="task-view-title">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
     <div class="modal-content">
+      <form id="task-editor-form" data-task-submit novalidate></form>
+      <p class="small text-body-secondary mx-4 mt-2 mb-0" role="status" data-properties-status>Loading task properties…</p><button type="button" class="btn btn-sm btn-outline-secondary mx-4" data-properties-retry hidden>Retry loading properties</button>
       <div class="modal-header">
         <div class="min-w-0 task-inline-title-wrap"><h2 class="task-dialog-eyebrow" id="task-view-title">Task details</h2>
           <label class="visually-hidden" for="task-view-title-input">Task title</label>
-          <input id="task-view-title-input" class="form-control task-inline-title" maxlength="200" required data-task-title aria-describedby="task-view-title-error" />
+          <input id="task-view-title-input" name="title" form="task-editor-form" class="form-control task-inline-title" maxlength="200" required data-task-title aria-describedby="task-view-title-error" />
           <div id="task-view-title-error" class="invalid-feedback" data-title-error></div></div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -19,14 +21,14 @@
         <div class="task-popup-properties">
           <div>
             <label class="form-label" for="task-view-stage">Stage</label>
-            <select id="task-view-stage" class="form-select" data-stage-input aria-describedby="task-view-stage-error task-view-stage-hint"></select>
+            <select id="task-view-stage" name="stage" form="task-editor-form" class="form-select" data-stage-input aria-describedby="task-view-stage-error task-view-stage-hint"></select>
             <div id="task-view-stage-error" class="invalid-feedback" data-stage-error></div>
             <p id="task-view-stage-hint" class="form-text" data-stage-hint hidden>The task moves to the end of the chosen stage.</p>
           </div>
           <div>
             <label class="form-label" for="task-view-deadline">Deadline <span class="text-body-secondary">(optional)</span></label>
             <div class="d-flex gap-2">
-              <input id="task-view-deadline" class="form-control" type="datetime-local" step="60" data-deadline-input aria-describedby="task-view-deadline-help task-view-deadline-error" />
+              <input id="task-view-deadline" name="deadline" form="task-editor-form" class="form-control" type="datetime-local" step="60" data-deadline-input aria-describedby="task-view-deadline-help task-view-deadline-error" />
               <button type="button" class="btn btn-outline-secondary" data-clear-deadline>Clear deadline</button>
             </div>
             <div id="task-view-deadline-error" class="invalid-feedback d-block" data-deadline-error></div>
@@ -36,7 +38,7 @@
         <p class="small" data-deadline hidden></p>
         <p class="small"><a data-task-activity href="/projects">View task activity</a></p>
         <h3 class="h6 task-description-heading" id="task-view-description-label">Description</h3>
-        <div class="task-editor"><div data-description-editor></div></div>
+        <div class="task-editor"><div data-description-editor data-editor></div></div>
         <div class="invalid-feedback d-block" id="task-view-description-error" data-description-error></div>
         <div class="alert alert-danger mt-3" role="alert" data-save-error hidden></div>
 
@@ -45,7 +47,7 @@
           <h3 class="h6" id="task-checklist-heading">Checklist</h3>
           <p class="small mb-1" data-checklist-summary aria-live="polite"></p>
           <progress class="w-100 mb-2" value="0" max="1" hidden></progress>
-          <p class="small text-body-secondary">Completing the checklist does not change the task’s stage.</p>
+          <p class="small text-body-secondary">Checklist changes are saved with the task. Completing the checklist does not change its stage.</p>
           <div class="alert alert-danger py-2 small" role="alert" data-checklist-error hidden></div>
           <button type="button" class="btn btn-sm btn-outline-secondary mb-2" data-checklist-retry hidden>Reload checklist</button>
           <p class="small text-body-secondary" role="status" data-checklist-status>Loading checklist…</p>
@@ -59,6 +61,7 @@
             <p class="form-text" id="task-checklist-help">Plain text, up to 500 characters. Use the arrow buttons to reorder items.</p>
           </form>
         </section>
+        <p class="form-text mt-4" data-create-related hidden>Save the task to add attachments and discussion.</p>
         <section class="attachments mt-4" aria-labelledby="task-attachments-heading">
           <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
             <h3 class="h6 mb-0" id="task-attachments-heading">
@@ -74,6 +77,7 @@
               </button>
             </div>
           </div>
+          <p class="small text-body-secondary">Attachments and discussion save immediately. Task properties are saved with Save Changes.</p>
           <p class="form-text mt-0" id="task-attachment-help" data-attachment-help></p>
           <div class="alert alert-danger py-2 small" role="alert" data-attachment-error hidden></div>
           <p class="text-body-secondary small" data-attachment-loading role="status">Loading attachments…</p>
@@ -113,7 +117,7 @@
           <h3 class="h6" id="task-labels-heading">Labels</h3>
           <label class="form-label small" for="task-label-search">Find project labels</label>
           <input type="search" class="form-control mb-2" id="task-label-search" maxlength="60" disabled />
-          <p class="small text-body-secondary">Select a checkbox to add a label; clear it to remove the label.</p>
+          <p class="small text-body-secondary">Select labels for this task. Changes are saved when you submit the form.</p>
           <div role="alert" class="alert alert-danger py-2 small" hidden></div>
           <p role="status" class="small text-body-secondary">Loading labels…</p>
           <div data-label-list></div>
@@ -141,7 +145,7 @@
         <button type="button" class="btn btn-outline-danger" data-action="delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete task</button>
         <div class="d-flex gap-2">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" data-action="save"><span class="spinner-border spinner-border-sm me-1" data-save-spinner hidden aria-hidden="true"></span>Save</button>
+          <button type="submit" form="task-editor-form" class="btn btn-primary" data-action="save" data-submit><span class="spinner-border spinner-border-sm me-1" data-save-spinner hidden aria-hidden="true"></span><span data-submit-label>Save Changes</span></button>
         </div>
       </div>
     </div>

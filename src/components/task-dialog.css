@@ -35,11 +35,6 @@
 .task-view-modal [data-task-checklist] [data-checklist-list] .btn { min-height: 30px; font-size: .7rem; padding: 3px 7px; }
 .task-view-modal .attachment-item .attachment-icon { font-size: 1.3rem !important; }
 .task-view-modal .comment-item { border-color: var(--tb-line); padding: 14px; }.task-view-modal .comment-body { font-size: .85rem; line-height: 1.65; }
-.task-form-modal .modal-dialog { max-width: 780px; }
-.task-form-modal .form-label { font-size: .82rem; font-weight: 550; }.task-form-modal .form-text { font-size: .73rem; color: var(--tb-muted); }
-.task-form-modal .task-editor-properties { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); gap: 18px; }
-.task-form-modal #task-title { font-size: 1rem; min-height: 44px; }.task-form-modal :is(input,select) { font-size: .85rem; }
-.task-form-modal [data-clear-deadline] { font-size: .73rem; padding: 4px 8px; }
 @media (max-width: 767.98px) {
   :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-dialog { margin: 8px; max-width: none; }
   :is(.task-view-modal,.task-form-modal) .modal-dialog-scrollable { height: calc(100dvh - 16px); }
@@ -49,7 +44,6 @@
   :is(.task-view-modal,.task-form-modal,.move-task-modal) .btn { min-height: 42px; }
   .task-view-modal .task-detail-layout { grid-template-columns: minmax(0,1fr); gap: 24px; }
   .task-view-modal .task-detail-sidebar { padding: 22px 0 0; border-left: 0; border-top: 1px solid var(--tb-line); }
-  .task-form-modal .task-editor-properties { grid-template-columns: minmax(0,1fr); gap: 0; }
   .task-view-modal .task-detail-sidebar .list-group-item .btn, .task-view-modal [data-task-checklist] [data-checklist-list] .btn { min-height: 40px; }
 }
 

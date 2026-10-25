@@ -1,7 +1,7 @@
 import { listProjectLabels, listTaskLabelIds, setTaskLabel } from '../../services/labels-service.js';
 import { labelBadge } from '../../utils/labels.js';
 
-export function setupTaskLabels(element, { taskId, projectId, signal, setBusy }) {
+export function setupTaskLabels(element, { taskId, projectId, signal, setBusy, draftOnly = false }) {
   const root = element.querySelector('[data-task-labels]');
   const list = root.querySelector('[data-label-list]');
   const search = root.querySelector('input');
@@ -9,6 +9,8 @@ export function setupTaskLabels(element, { taskId, projectId, signal, setBusy })
   const errorBox = root.querySelector('[role="alert"]');
   let labels = [];
   let assigned = new Set();
+  let original = [];
+  let loaded = false;
   let busy = false;
   function render() {
     list.replaceChildren();
@@ -31,8 +33,8 @@ export function setupTaskLabels(element, { taskId, projectId, signal, setBusy })
     const restoreFocus = list.contains(document.activeElement);
     busy = true; setBusy(true); errorBox.hidden = true; render();
     try {
-      await setTaskLabel(taskId, label.id, add);
-      assigned = await listTaskLabelIds(taskId, { signal });
+      if (draftOnly) { if(add) assigned.add(label.id); else assigned.delete(label.id); }
+      else { await setTaskLabel(taskId, label.id, add); assigned = await listTaskLabelIds(taskId, { signal }); }
     } catch (error) {
       if (!signal.aborted) { errorBox.textContent = error.message; errorBox.hidden = false; }
     } finally {
@@ -45,15 +47,19 @@ export function setupTaskLabels(element, { taskId, projectId, signal, setBusy })
   }
   search.addEventListener('input', render, { signal });
   async function load() {
+    errorBox.hidden = true; status.textContent = 'Loading labels…';
     try {
       [labels, assigned] = await Promise.all([
-        listProjectLabels(projectId, { signal }), listTaskLabelIds(taskId, { signal }),
+        listProjectLabels(projectId, { signal }), taskId ? listTaskLabelIds(taskId, { signal }) : Promise.resolve(new Set()),
       ]);
       if (signal.aborted) return;
-      search.disabled = false; render();
+      original = [...assigned].sort(); loaded = true; search.disabled = false; render();
     } catch (error) {
       if (!signal.aborted) { status.textContent = ''; errorBox.textContent = error.message; errorBox.hidden = false; }
     }
   }
-  load();
+  const ready = load();
+  return { ready, retry: () => loaded ? Promise.resolve() : load(), isLoaded: () => loaded, getIds: () => [...assigned], isDirty: () => JSON.stringify([...assigned].sort()) !== JSON.stringify(original),
+    validate: () => { if(!loaded) throw new Error('Load project labels before saving.'); },
+  };
 }

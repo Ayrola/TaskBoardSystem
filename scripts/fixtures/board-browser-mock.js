@@ -12,6 +12,8 @@
   if(stored)tasks.splice(0,tasks.length,...JSON.parse(stored));
   const persist=()=>sessionStorage.setItem('taskboard-browser-fixture',JSON.stringify(tasks));
   window.__boardMock={tasks,stages,id,user,failSave:false,failMove:false,failBoard:false,denied:false,member:false,calls:[]};
+  Object.assign(window.__boardMock,JSON.parse(sessionStorage.getItem('taskboard-form-fixture')??'{}'));
+  const persistForm=()=>sessionStorage.setItem('taskboard-form-fixture',JSON.stringify({formLabels:window.__boardMock.formLabels??{},formAssignees:window.__boardMock.formAssignees??{},formChecklists:window.__boardMock.formChecklists??{},formReceipts:window.__boardMock.formReceipts??{}}));
   const nativeFetch=window.fetch;
   window.fetch=async(input,init={})=>{
     const raw=typeof input==='string'?input:input.url;
@@ -51,6 +53,7 @@
     if(path==='projects' && mock.projectBrowserProjects){const target=url.searchParams.get('id')?.slice(3);const p=mock.projectBrowserProjects.find(p=>p.id===target);return respond(p?{...p,owner_id:p.is_owner?user.id:id(99)}:null);}
     if(path==='projects')return respond(mock.denied?null:{id:id(10),title:'Product workspace',description:'A focused place to plan, build, and ship thoughtful product improvements. '+ 'Keep work visible, reduce friction, and bring the team along. '.repeat(4),owner_id:mock.member?id(99):user.id});
     if(path==='project_stages')return respond(stages);
+    if(path==='project_labels'&&mock.failLabelLoad)return respond({message:'Preview label load failure'},500);
     if(path==='project_labels')return respond([{id:id(31),project_id:id(10),name:'Product',colour:'#dce9ff'}]);
     if(path==='board_stage_counts')return respond(stages.map(s=>({stage_id:s.id,task_count:tasks.filter(t=>t.stage_id===s.id).length})));
     if(path==='tasks'){
@@ -60,13 +63,30 @@
       const cursor=url.searchParams.get('or');if(cursor){const match=cursor.match(/position.gt.(\d+)/);if(match)list=list.filter(t=>t.position>Number(match[1]));}
       return respond(list.sort((a,b)=>a.position-b.position||a.id.localeCompare(b.id)).slice(0,Number(url.searchParams.get('limit')??1000)));
     }
+    if(path==='list_task_assignees' && body.p_task_ids.some(id=>mock.formAssignees?.[id]))return respond(body.p_task_ids.flatMap(id=>mock.formAssignees?.[id]??[]));
     if(path==='list_task_assignees' && mock.cardAssignees)return respond(mock.cardAssignees.filter(a=>body.p_task_ids.includes(a.task_id)));
     if(path==='list_task_assignees')return respond(body.p_task_ids.filter(t=>t===id(100)||t===id(200)).map(task_id=>({task_id,user_id:id(1),label:'Alex Morgan'})));
     if(path==='task_checklist_progress')return respond(body.p_task_ids.map(task_id=>({task_id,total:task_id===id(100)?5:0,completed:task_id===id(100)?2:0})));
-    if(path==='get_task_checklist')return respond({items:[],total:0,completed:0});
+    if(path==='get_task_checklist'){const items=mock.formChecklists?.[body.p_task_id]??[];return respond({items,total:items.length,completed:items.filter(i=>i.completed).length});}
     if(path==='list_task_comments')return respond({rows:[],total:0});
-    if(path==='search_task_assignees')return respond([]);
+    if(path==='search_task_assignees')return respond(mock.formParticipants??[]);
+    if(path==='task_labels'){const taskId=url.searchParams.get('task_id')?.slice(3);return respond((mock.formLabels?.[taskId]??tasks.find(t=>t.id===taskId)?.task_labels?.map(row=>row.project_labels.id)??[]).map(label_id=>({label_id})));}
     if(path==='task_labels'||path==='task_attachments'||path==='attachment_cleanup_queue')return respond([]);
+    if(path==='save_task_form'){
+      if(mock.failSave)return respond({message:'Preview save failure'},500);
+      if(mock.failRelated)return respond({message:'Invalid project participant',code:'23514'},400);
+      if(mock.delaySave)await new Promise(r=>setTimeout(r,mock.delaySave));
+      mock.formReceipts??={};const receipt=mock.formReceipts[body.p_request_id];if(!body.p_task_id&&receipt)return respond(receipt);
+      const values=body.p_values;let task=body.p_task_id?tasks.find(t=>t.id===body.p_task_id):null;
+      if(!task){task={...tasks[0],id:id(500+tasks.length),project_id:body.p_project_id,stage_id:values.stage_id,position:tasks.filter(t=>t.stage_id===values.stage_id).length};tasks.push(task);}
+      const source=task.stage_id;if(source!==values.stage_id){task.position=tasks.filter(t=>t.stage_id===values.stage_id).length;tasks.filter(t=>t.stage_id===source&&t.id!==task.id).forEach((t,i)=>t.position=i);}
+      Object.assign(task,{title:values.title,description:values.description,stage_id:values.stage_id,due_at:values.due_at,done:stages.find(s=>s.id===values.stage_id).is_done,task_labels:values.label_ids.map(label=>({project_labels:{id:label,name:'Product',colour:'#dce9ff'}}))});
+      (mock.formLabels??={})[task.id]=values.label_ids;(mock.formAssignees??={})[task.id]=values.assignee_ids.map(user_id=>({task_id:task.id,user_id,label:'Alex Morgan'}));
+      (mock.formChecklists??={})[task.id]=values.checklist.map((item,i)=>({...item,id:item.id??id(7000+i),position:i}));
+      if(!body.p_task_id)mock.formReceipts[body.p_request_id]=task.id;
+      persist();persistForm();
+      if(mock.commitThenFail){mock.commitThenFail=false;return respond({message:'Lost response'},500);}return respond(task.id);
+    }
     if(path==='create_task_with_deadline'){
       if(mock.failSave)return respond({message:'Preview save failure'},500);
       const task={...tasks[0],id:id(500+tasks.length),stage_id:body.p_stage_id,title:body.p_title,description:body.p_description,due_at:body.p_due_at,task_labels:[],position:tasks.filter(t=>t.stage_id===body.p_stage_id).length};tasks.push(task);persist();return respond(task.id);

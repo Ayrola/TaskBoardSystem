@@ -1,6 +1,6 @@
-import { getTaskChecklist, writeTaskChecklist, ChecklistChangedError, CHECKLIST_TEXT_MAX } from '../../services/checklist-service.js';
+import { getTaskChecklist, writeTaskChecklist, ChecklistChangedError, CHECKLIST_TEXT_MAX, validateChecklistText } from '../../services/checklist-service.js';
 
-export function setupTaskChecklist(element, { taskId, signal, setBusy }) {
+export function setupTaskChecklist(element, { taskId, signal, setBusy, draftOnly = false }) {
   const root = element.querySelector('[data-task-checklist]');
   const list = root.querySelector('[data-checklist-list]');
   const form = root.querySelector('[data-checklist-add]');
@@ -12,6 +12,8 @@ export function setupTaskChecklist(element, { taskId, signal, setBusy }) {
   const summary = root.querySelector('[data-checklist-summary]');
   const progress = root.querySelector('progress');
   let items = [];
+  let original = [];
+  const snapshot = () => items.map(({id,text,completed}) => ({id:id.startsWith('draft-')?null:id,text,completed}));
   let loaded = false;
   let busy = false;
   let editing = null;
@@ -84,24 +86,32 @@ export function setupTaskChecklist(element, { taskId, signal, setBusy }) {
     else input.focus();
   }
   async function reload() {
-    const data = await getTaskChecklist(taskId, { signal });
+    const data = taskId ? await getTaskChecklist(taskId, { signal }) : {items:[]};
     if (signal.aborted) return;
-    items = data.items; loaded = true; retry.hidden = true;
+    items = data.items; original = snapshot(); loaded = true; retry.hidden = true;
   }
   async function mutate(action, values, focusId = null, focusAction = null) {
     if (busy || !loaded) return;
     busy = true; setBusy(true); showError(''); render();
     try {
-      await writeTaskChecklist(taskId, action, values);
+      if (draftOnly) {
+        if (action === 'add') {
+          if(items.length >= 200) throw new Error('A task can have up to 200 checklist items.');
+          items.push({id:`draft-${crypto.randomUUID()}`,text:validateChecklistText(values.text),completed:false});
+        } else if (action === 'edit') items.find(item=>item.id===values.itemId).text=validateChecklistText(values.text);
+        else if (action === 'complete') items.find(item=>item.id===values.itemId).completed=values.completed;
+        else if (action === 'delete') items=items.filter(item=>item.id!==values.itemId);
+        else if (action === 'reorder') items=values.order.map(id=>items.find(item=>item.id===id));
+      } else await writeTaskChecklist(taskId, action, values);
       if (signal.aborted) return;
       if (action === 'add') input.value = '';
       editing = null; confirming = null;
-      try { await reload(); }
+      try { if (!draftOnly) await reload(); }
       catch (error) { loaded = false; retry.hidden = false; throw error; }
     } catch (error) {
       if (!signal.aborted) {
         if (error instanceof ChecklistChangedError) {
-          try { await reload(); } catch { loaded = false; retry.hidden = false; }
+          try { if (!draftOnly) await reload(); } catch { loaded = false; retry.hidden = false; }
         }
         showError(error.message);
       }
@@ -164,5 +174,9 @@ export function setupTaskChecklist(element, { taskId, signal, setBusy }) {
     finally { busy = false; if (!signal.aborted) render(); }
   }
   retry.addEventListener('click', load, { signal });
-  load();
+  const ready = load();
+  return { ready, retry: () => loaded ? Promise.resolve() : load(), isLoaded: () => loaded, getItems: snapshot, getOriginal: () => original,
+    isDirty: () => JSON.stringify(snapshot()) !== JSON.stringify(original) || Boolean(input.value.trim()) || editing !== null,
+    validate: () => { if (!loaded) throw new Error('Load the checklist before saving.'); if (input.value.trim() || editing !== null) throw new Error('Add or finish editing the checklist item before saving the task.'); },
+  };
 }

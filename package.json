@@ -27,7 +27,9 @@
     "test:dashboard:browser": "BOARD_CHECK_DASHBOARD=1 node scripts/test-board-browser.mjs",
     "test:cards:browser": "BOARD_CHECK_CARDS=1 node scripts/test-board-browser.mjs",
     "test:context:browser": "BOARD_CHECK_CONTEXT=1 node scripts/test-board-browser.mjs",
-    "test:context": "node scripts/test-project-navigation.mjs && node --experimental-vm-modules scripts/test-project-context.mjs"
+    "test:context": "node scripts/test-project-navigation.mjs && node --experimental-vm-modules scripts/test-project-context.mjs",
+    "test:task-form": "node scripts/test-task-form.mjs",
+    "test:task-form:browser": "BOARD_CHECK_FORM=1 node scripts/test-board-browser.mjs"
   },
   "keywords": [],
   "author": "",

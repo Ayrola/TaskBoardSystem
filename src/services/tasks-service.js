@@ -117,3 +117,23 @@ export async function getTask(taskId, { projectId, signal } = {}) {
   return { id: data.id, projectId: data.project_id, stageId: data.stage_id, title: data.title,
     description: data.description ?? '', done: data.done, dueAt: data.due_at, createdAt: data.created_at, updatedAt: data.updated_at };
 }
+
+// A single authorized transaction saves the task and all draft relationships.
+export async function saveTaskForm({ projectId, taskId = null, requestId, title, description, stageId, dueAt, labelIds = [], assigneeIds = [], checklist = [], expectedChecklist = null }) {
+  if (!isUuid(projectId) || !isUuid(stageId) || (taskId && !isUuid(taskId)) || !isUuid(requestId)) throw new TaskNotFoundError();
+  if (![...labelIds, ...assigneeIds].every(isUuid)) throw new Error('Invalid task relationships.');
+  const { data, error } = await supabaseClient.rpc('save_task_form', {
+    p_project_id: projectId, p_task_id: taskId, p_request_id: requestId,
+    p_values: { title: title.trim(), description: prepareDescription(description), stage_id: stageId, due_at: dueAt ?? null,
+      label_ids: [...new Set(labelIds)].sort(), assignee_ids: [...new Set(assigneeIds)].sort(), checklist },
+    p_expected_checklist: expectedChecklist,
+  });
+  if (error?.code === 'PGRST202' || error?.code === '42883' || error?.code === '42P01') {
+    throw new Error('Task saving is unavailable because a required database update is missing. Your draft is preserved. Ask the application administrator to complete the update, then retry.');
+  }
+  if (error?.code === 'P0002') throw new TaskNotFoundError();
+  if (error?.code === '40001') throw new Error(error.message);
+  if (error?.code === '23514' || error?.code === '23503') throw new Error('A selected label, participant or checklist item is no longer valid. Review the draft and try again.');
+  if (error || !data) throw new Error('Could not save the task. Your draft is preserved; retry without closing this window.');
+  return data;
+}
