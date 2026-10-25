@@ -1,10 +1,12 @@
+import { parsePriorities, taskPriority } from './priorities.js';
 import { isUuid } from './validation.js';
 import { isOverdue } from './deadlines.js';
-export const EMPTY_BOARD_FILTERS = Object.freeze({ search: '', status: '', stage: '', label: '', assignment: '', assignee: '', due: '' });
+export const EMPTY_BOARD_FILTERS = Object.freeze({ search: '', status: '', stage: '', label: '', assignment: '', assignee: '', due: '', priority: '', sort: '' });
 export function hasBoardFilters(filters) { return Object.values(filters).some(value => String(value).trim() !== ''); }
 export function matchesBoardTask(task, stageId, filters, plainDescription = '', now = Date.now()) {
   const search = filters.search.trim().toLocaleLowerCase();
   if (search && !`${task.title} ${plainDescription}`.toLocaleLowerCase().includes(search)) return false;
+  if (filters.priority && !parsePriorities(filters.priority).includes(taskPriority(task.priority))) return false;
   if (filters.status === 'open' && task.done) return false;
   if (filters.status === 'completed' && !task.done) return false;
   if (filters.stage && filters.stage !== stageId) return false;
@@ -22,6 +24,8 @@ export function boardFiltersFromQuery(query = {}) {
   const filters = { ...EMPTY_BOARD_FILTERS };
   for (const key of ['stage', 'label', 'assignee']) if (isUuid(query[key])) filters[key] = query[key];
   for (const [key, values] of Object.entries({ status: ['open','completed'], assignment: ['assigned','unassigned'], due: ['overdue','scheduled','none'] })) if (values.includes(query[key])) filters[key] = query[key];
+  filters.priority = parsePriorities(query.priority).join(',');
+  filters.sort = query.sort === 'priority' ? 'priority' : '';
   if (typeof query.search === 'string') filters.search = query.search.trim().slice(0,200);
   return filters;
 }

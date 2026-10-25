@@ -48,7 +48,7 @@ export async function checkProjectStages({evaluate,send,wait,saveScreenshot,erro
  await click('.task-card [data-open-task]');await wait(`document.querySelector('#task-view-title-input') && document.querySelector('.task-view-modal [data-action="save"]')?.disabled===false`);
  await value('#task-view-title-input','Unsaved edit');await evaluate(`__boardMock.stages.push({id:__boardMock.id(8999),name:'Remote stage',position:6,is_done:false});sessionStorage.setItem('taskboard-stages-fixture',JSON.stringify(__boardMock.stages))`);await broadcast();
  await new Promise(r=>setTimeout(r,600));await check(`document.querySelector('#task-view-title-input').value==='Unsaved edit' && document.querySelectorAll('.board-column').length===6`,'Realtime preserves open edit and defers board refresh');
- await evaluate(`window.confirm=()=>true`);await click('.task-view-modal .modal-header [data-bs-dismiss]');await settled();await wait(`document.querySelectorAll('.board-column').length===7`);
+ await evaluate(`window.confirm=()=>true`);await click('.task-view-modal .modal-header [data-bs-dismiss]');await click('[data-discard-changes]');await settled();await wait(`document.querySelectorAll('.board-column').length===7`);
  await send('Page.reload',{ignoreCache:true});await wait(`typeof window.__releaseId==='undefined' && document.querySelectorAll('.board-column').length===7 && document.querySelector('[data-live-status]').textContent==='Live updates connected'`);
  await check(`Array.from(document.querySelectorAll('[data-stage-name]')).map(e=>e.textContent).slice(-3).join(',')==='Verification,Released,Remote stage'`,'Custom order survives reload');
  await evaluate(`__boardMock.member=true`);await broadcast();await wait(`!document.querySelector('[data-add-stage]')`);

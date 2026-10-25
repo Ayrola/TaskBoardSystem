@@ -1,3 +1,5 @@
+import { PRIORITIES, PRIORITY_META } from '../../utils/priorities.js';
+import { renderPriority } from '../../components/task-priority/task-priority.js';
 import { openReportExportModal } from '../../components/report-export-modal/report-export-modal.js';
 import Chart from 'chart.js/auto';
 import { createSummaryCard } from '../../components/summary-card/summary-card.js';
@@ -46,6 +48,11 @@ export function mount(container, ctx) {
       scales: { x: { ticks: { color: muted, precision: 0 }, grid: { color: grid } }, y: { ticks: { color: ink }, grid: { display: false } } },
     };
     const { totals, stages, creation } = snapshot;
+    const priorities = snapshot.priorities ?? PRIORITIES.map(priority=>({priority,count:priority==='medium'?totals.total:0,open_count:priority==='medium'?totals.open:0}));
+    charts.push(new Chart(root.querySelector('[data-chart="priorities"]'),{
+      type:'bar',data:{labels:priorities.map(p=>PRIORITY_META[p.priority].label),datasets:[{data:priorities.map(p=>p.count),backgroundColor:priorities.map(p=>getComputedStyle(root.querySelector(`[data-priority="${p.priority}"]`)).color),borderRadius:4,maxBarThickness:16}]},
+      options:{...options,indexAxis:'y',scales:{...options.scales,x:{...options.scales.x,beginAtZero:true}},onClick:(_,items)=>{if(!items.length)return;clearTimeout(chartNavigationTimer);const destination=boardLink({priority:priorities[items[0].index].priority});chartNavigationTimer=setTimeout(()=>{if(!ctx.signal.aborted)ctx.navigate(destination);},0);}},
+    }));
     root.querySelector('[data-stage-chart-wrap]').style.height = `${Math.max(180, Math.min(480, stages.length * 38 + 35))}px`;
     charts.push(new Chart(root.querySelector('[data-chart="stages"]'), {
       type: 'bar', data: { labels: stages.map(s => s.name), datasets: [{ data: stages.map(s => s.count), backgroundColor: stages.map(s => /^#[0-9a-f]{6}$/i.test(s.colour ?? '') ? s.colour : accent), borderRadius: 4, maxBarThickness: 18 }] },
@@ -81,6 +88,8 @@ export function mount(container, ctx) {
       ['Completed tasks', totals.completed, 'check-circle', { status: 'completed' }, 'Current tasks in stages that count as done.'],
       ['Completion', `${completion}%`, 'pie-chart', { status: 'completed' }, 'Completed tasks divided by total current tasks. Zero tasks shows neutral 0%.'],
       ['Overdue open tasks', totals.overdue, 'calendar-x', { status: 'open', due: 'overdue' }, 'Open tasks with a deadline strictly before the snapshot time.'],
+      ['High priority open', totals.high_open ?? 0, 'chevron-double-up', { status: 'open', priority: 'high' }, 'Current open tasks with High priority, regardless of deadline.'],
+      ['Urgent priority open', totals.urgent_open ?? 0, 'exclamation-triangle', { status: 'open', priority: 'urgent' }, 'Current open tasks with Urgent priority, regardless of deadline.'],
       ['Unassigned open tasks', totals.unassigned, 'person-dash', { status: 'open', assignment: 'unassigned' }, 'Open tasks with no task assignees.'],
     ];
     root.querySelector('[data-summary-cards]').replaceChildren(...cards.map(([label, value, icon, filters, definition]) => {
@@ -90,6 +99,12 @@ export function mount(container, ctx) {
     const add = root.querySelector('[data-add-task]');
     add.href = boardLink(stages.length ? { add: '1' } : {});
     add.textContent = stages.length ? 'Add Task' : 'Open board to add a stage';
+    const priorityTable=root.querySelector('[data-priority-table]');priorityTable.replaceChildren();
+    const priorities=data.priorities??PRIORITIES.map(priority=>({priority,count:priority==='medium'?totals.total:0,open_count:priority==='medium'?totals.open:0}));
+    for(const row of priorities){
+      const tr=document.createElement('tr'),name=document.createElement('th');name.scope='row';const a=link('',boardLink({priority:row.priority}));const badge=document.createElement('span');renderPriority(badge,row.priority);a.append(badge);name.append(a);
+      tr.append(name);for(const value of [row.count,`${percent(row.count,totals.total)}%`,row.open_count]){const cell=document.createElement('td');cell.textContent=value;tr.append(cell);}priorityTable.append(tr);
+    }
     const stageTable = root.querySelector('[data-stage-table]'); stageTable.replaceChildren();
     stages.forEach(stage => {
       const row = document.createElement('tr'), name = document.createElement('th'); name.scope = 'row';

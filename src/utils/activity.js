@@ -1,3 +1,4 @@
+import { PRIORITY_META } from './priorities.js';
 // Pure text summaries: descriptions are represented only by a changed flag.
 export function activitySummary(entry) {
   const changes = entry.changes ?? {};
@@ -5,6 +6,7 @@ export function activitySummary(entry) {
   if (entry.event_type === 'deleted') return 'Task deleted.';
   const parts = [];
   if (changes.title) parts.push(`Title changed from “${changes.title.from}” to “${changes.title.to}”.`);
+  if (changes.priority) parts.push(`Priority changed from ${PRIORITY_META[changes.priority.from]?.label ?? changes.priority.from} to ${PRIORITY_META[changes.priority.to]?.label ?? changes.priority.to}.`);
   if (changes.description_changed) parts.push('Description changed.');
   if (changes.stage) parts.push(`Stage changed from ${changes.stage.from_name ?? changes.stage.from_id} to ${changes.stage.to_name ?? changes.stage.to_id}.`);
   if (changes.position) parts.push(`Position changed from ${changes.position.from + 1} to ${changes.position.to + 1}.`);

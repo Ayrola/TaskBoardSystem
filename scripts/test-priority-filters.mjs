@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {PRIORITIES,sortBoardTasks} from '../src/utils/priorities.js';
+import {EMPTY_BOARD_FILTERS,boardFiltersFromQuery,matchesBoardTask} from '../src/utils/board-filters.js';
+import {activitySummary} from '../src/utils/activity.js';
+import {calculateReportMetrics} from '../src/reports/report-metrics.js';
+import {reportFixture} from './fixtures/report-fixture.mjs';
+const tasks=Array.from({length:1205},(_,i)=>({id:String(i).padStart(8,'0'),priority:PRIORITIES[i%4],position:i,title:`Task ${i}`,done:i%5===0}));
+const original=JSON.stringify(tasks),filter={...EMPTY_BOARD_FILTERS,priority:'high,urgent',status:'open'};
+assert.equal(tasks.filter(t=>matchesBoardTask(t,'s',filter)).length,tasks.filter(t=>['high','urgent'].includes(t.priority)&&!t.done).length);
+const sorted=sortBoardTasks(tasks,'priority');assert.equal(sorted[0].priority,'urgent');assert.equal(sorted.at(-1).priority,'low');assert.equal(JSON.stringify(tasks),original);assert.equal(sortBoardTasks(tasks,''),tasks);
+for(let i=1;i<sorted.length;i++)if(sorted[i].priority===sorted[i-1].priority)assert.ok(sorted[i].position>sorted[i-1].position);
+assert.equal(boardFiltersFromQuery({priority:'urgent,low,urgent,invalid'}).priority,'low,urgent');assert.equal(boardFiltersFromQuery({sort:'priority'}).sort,'priority');
+assert.match(activitySummary({event_type:'updated',changes:{priority:{from:'medium',to:'urgent'}}}),/Medium to Urgent/);
+const report=reportFixture();report.tasks.forEach((t,i)=>t.priority=PRIORITIES[i%4]);const metrics=calculateReportMetrics(report);assert.equal(metrics.priorities.reduce((n,p)=>n+p.count,0),8);assert.equal(metrics.totals.highOpen,1);assert.equal(metrics.totals.urgentOpen,1);assert.equal(metrics.totals.overdue,2);assert.equal(metrics.register[3].priorityName,'Urgent');
+console.log('PASS: 1205-task OR priority/AND status filters, deterministic immutable priority sorting, manual default, URL parsing, activity summaries and full-project PDF priority metrics without deadline coupling.');

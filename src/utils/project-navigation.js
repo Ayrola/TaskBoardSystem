@@ -10,7 +10,7 @@ export function projectDestination(project, path) {
 }
 export function legacyProjectQuery(section, query, sameProject) {
   const next = new URLSearchParams();
-  const allowed = { dashboard: [], tasks: ['task','add','status','stage','label','assignment','assignee','due','search'], 'task-list': ['status'], labels: ['label', 'page'], deadlines: ['bucket', 'timezone', 'page'], activity: ['task', 'page', 'snapshot'] }[section] ?? [];
+  const allowed = { dashboard: [], tasks: ['task','add','status','stage','label','assignment','assignee','due','search','priority','sort'], 'task-list': ['status'], labels: ['label', 'page'], deadlines: ['bucket', 'timezone', 'page'], activity: ['task', 'page', 'snapshot'] }[section] ?? [];
   for (const key of allowed) {
     if (!sameProject && ['task', 'label', 'stage', 'assignee', 'snapshot', 'page'].includes(key)) continue;
     if (query.get(key)) next.set(key, query.get(key));

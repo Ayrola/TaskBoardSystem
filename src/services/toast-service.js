@@ -56,7 +56,7 @@ export function initToasts() {
 function createHost() {
   const host = document.createElement('section');
   host.id = 'toast-host';
-  host.className = 'toast-host position-fixed bottom-0 end-0 p-3';
+  host.className = 'toast-host position-fixed top-0 end-0 p-3';
   host.setAttribute('aria-label', 'Notifications');
   for (const live of ['assertive', 'polite']) {
     const region = document.createElement('div');

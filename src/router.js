@@ -26,6 +26,7 @@ let outlet = null;
 let current = null;
 let pendingController = null;
 let renderToken = 0;
+let navigationIntent = 0;
 let renderedKey = null;
 // Set by a page with unsaved work; returns true to allow leaving.
 let leaveGuard = null;
@@ -281,16 +282,18 @@ async function watchProject(ctx, refreshListeners, token, name) {
   }
 }
 
-export function navigate(to, { replace = false } = {}) {
+export async function navigate(to, { replace = false } = {}) {
   const url = new URL(to, location.href);
   if (url.origin !== location.origin) {
     location.assign(url.href);
     return;
   }
   const target = url.pathname + url.search + url.hash;
+  const intent = ++navigationIntent;
   if (target === location.pathname + location.search + location.hash) {
     if (!resolve(url.pathname).route.refreshOnReselect) return;
-    if (leaveGuard && !leaveGuard()) return;
+    if (leaveGuard && !(await leaveGuard())) return;
+    if (intent !== navigationIntent) return;
     // Re-selecting Dashboard is an explicit refresh, including recovery from a failed mount.
     // Keep the current page/period when mounted, and avoid adding duplicate history entries.
     if (current?.reselectListeners.size) {
@@ -300,7 +303,8 @@ export function navigate(to, { replace = false } = {}) {
     }
     return;
   }
-  if (leaveGuard && !leaveGuard()) return;
+  if (leaveGuard && !(await leaveGuard())) return;
+  if (intent !== navigationIntent) return;
   history[replace ? 'replaceState' : 'pushState']({}, '', target);
   render({ focus: true });
 }
@@ -326,10 +330,13 @@ function onClick(event) {
   navigate(url.pathname + url.search + url.hash);
 }
 
-function onPopState() {
+async function onPopState() {
   // Hash-only history entries do not change the rendered page.
   if (location.pathname + location.search === renderedKey) return;
-  if (leaveGuard && !leaveGuard()) {
+  const intent = ++navigationIntent;
+  const allowed = !leaveGuard || await leaveGuard();
+  if (intent !== navigationIntent) return;
+  if (!allowed) {
     // The browser already moved; put the current page's URL back.
     history.pushState({}, '', renderedKey);
     return;

@@ -51,6 +51,8 @@
         <label>Assignment<select data-filter="assignment"><option value="">Anyone</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select></label>
         <label>Person<select data-filter="assignee"><option value="">All people</option></select></label>
         <label>Deadline<select data-filter="due"><option value="">Any deadline</option><option value="overdue">Overdue</option><option value="scheduled">Has deadline</option><option value="none">No deadline</option></select></label>
+        <fieldset class="board-priority-filter"><legend>Priority</legend><div><label><input type="checkbox" value="low" data-priority-filter> ↓ Low</label><label><input type="checkbox" value="medium" data-priority-filter> ◆ Medium</label><label><input type="checkbox" value="high" data-priority-filter> ↑ High</label><label><input type="checkbox" value="urgent" data-priority-filter> ‼ Urgent</label></div></fieldset>
+        <label>Sort<select data-filter="sort"><option value="">Manual board order</option><option value="priority">Priority: highest first</option></select></label>
         <label>Density<select data-card-density><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
         <label class="board-description-preference"><input type="checkbox" data-card-descriptions checked> Show descriptions</label>
       </div>

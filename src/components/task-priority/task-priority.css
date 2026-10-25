@@ -1,0 +1,4 @@
+.task-priority { display:inline-flex; gap:4px; align-items:center; font-size:.68rem; font-weight:650; line-height:1.5; padding:1px 0; white-space:nowrap; }
+.task-priority[data-priority="low"] { color:#49627a; }.task-priority[data-priority="medium"] { color:#795815; }.task-priority[data-priority="high"] { color:#a33c0a; }.task-priority[data-priority="urgent"] { color:#b42331; }
+[data-bs-theme="dark"] .task-priority[data-priority="low"] { color:#aebfd2; }[data-bs-theme="dark"] .task-priority[data-priority="medium"] { color:#e9cc83; }[data-bs-theme="dark"] .task-priority[data-priority="high"] { color:#ffbc91; }[data-bs-theme="dark"] .task-priority[data-priority="urgent"] { color:#ffa5ae; }
+.page-tasks[data-density="compact"] .task-priority { font-size:.63rem; }

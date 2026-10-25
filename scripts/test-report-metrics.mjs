@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {calculateReportMetrics,REPORT_SECTIONS,validateReportOptions,dateInTimezone,reportFilename} from '../src/reports/report-metrics.js';
 import {reportFixture} from './fixtures/report-fixture.mjs';
 const normal=calculateReportMetrics(reportFixture());
-assert.deepEqual(normal.totals,{total:8,open:5,completed:3,overdue:2,dueSoon:2,noDeadline:1,assignedOpen:3,unassignedOpen:2,unlabelled:4,completion:37.5});
+assert.deepEqual(normal.totals,{highOpen:0,urgentOpen:0,total:8,open:5,completed:3,overdue:2,dueSoon:2,noDeadline:1,assignedOpen:3,unassignedOpen:2,unlabelled:4,completion:37.5});
 assert.equal(normal.period.completionEvents,2);assert.equal(normal.period.throughput,1);assert.equal(normal.period.reopenings,1);assert.equal(normal.period.transitions,3);assert.equal(normal.period.creationEvents,1);assert.equal(normal.period.created,7);
 assert.equal(normal.period.trend.length,7);assert.equal(normal.period.trend.find(d=>d.day==='2026-10-24').throughput,1);
 assert.equal(normal.people[0].open+normal.people[1].open,6,'Multi-assignee work is explicit, not a unique-task total');

@@ -10,7 +10,7 @@ import {
   removeAttachment,
   getAttachmentDownloadUrl,
 } from '../../services/attachments-service.js';
-import { showSuccess, TOAST_MESSAGES } from '../../services/toast-service.js';
+import { showError, showSuccess, TOAST_MESSAGES } from '../../services/toast-service.js';
 import {
   COMMENTS_PAGE_SIZE,
   COMMENT_MAX_LENGTH,
@@ -76,8 +76,37 @@ export function openTaskForm({ mode, task: suppliedTask, stage, stages, stageId,
     element.querySelectorAll('.task-detail-main > section:not(.task-overview),.task-detail-sidebar').forEach(section=>{section.inert=busy;});
   }
   const dirty=()=>fields.isDirty()||labels.isDirty()||checklist.isDirty()||assignees.isDirty();
-  const canLeave=()=>!(saveBusy||checklistBusy||labelBusy||assignmentBusy||attachmentBusy) && (finished||!dirty()||window.confirm('Discard unsaved task changes?'));
-  modal.setCanClose(canLeave);
+  let discardPromise=null,resolveDiscard=null;
+  const discardPanel=element.querySelector('[data-discard-confirm]');
+  const layout=element.querySelector('.task-detail-layout');
+  let previousFocus=null;
+  function askDiscard(){
+    if(discardPromise)return discardPromise;
+    previousFocus=document.activeElement;layout.inert=true;element.querySelector('.modal-header').inert=true;element.querySelector('.modal-footer').inert=true;discardPanel.hidden=false;
+    saveButton.disabled=deleteButton.disabled=true;
+    element.querySelectorAll('[data-bs-dismiss]').forEach(button=>{button.disabled=true;});
+    discardPanel.scrollIntoView({block:'nearest'});element.querySelector('[data-keep-editing]').focus();
+    discardPromise=new Promise(resolve=>{resolveDiscard=resolve;});return discardPromise;
+  }
+  function settleDiscard(discard){
+    if(!resolveDiscard)return;
+    const resolve=resolveDiscard;resolveDiscard=null;discardPromise=null;
+    discardPanel.hidden=true;layout.inert=false;element.querySelector('.modal-header').inert=false;element.querySelector('.modal-footer').inert=false;setSaving(false);
+    if(!discard)previousFocus?.focus({preventScroll:true});resolve(discard);
+  }
+  element.addEventListener('keydown',event=>{if(event.key==='Escape'&&!discardPanel.hidden){event.preventDefault();event.stopImmediatePropagation();settleDiscard(false);}},{signal,capture:true});
+  element.querySelector('[data-keep-editing]').addEventListener('click',()=>settleDiscard(false),{signal});
+  element.querySelector('[data-discard-changes]').addEventListener('click',()=>settleDiscard(true),{signal});
+  signal.addEventListener('abort',()=>{resolveDiscard?.(false);resolveDiscard=null;discardPromise=null;},{once:true});
+  const canLeave=()=>{
+    if(saveBusy||checklistBusy||labelBusy||assignmentBusy||attachmentBusy)return false;
+    if(finished||!dirty())return true;
+    return askDiscard().then(discard=>{if(discard)finished=true;return discard;});
+  };
+  modal.setCanClose(()=>{
+    const decision=canLeave();if(typeof decision==='boolean')return decision;
+    decision.then(discard=>{if(discard&&!signal.aborted)modal.close(null);});return false;
+  });
   window.addEventListener('beforeunload',event=>{if(!finished&&(saveBusy||dirty())){event.preventDefault();event.returnValue='';}},{signal});
   element.querySelector('[data-task-submit]').addEventListener('submit',async event=>{
     event.preventDefault();if(saveBusy||!ready||checklistBusy||labelBusy||attachmentBusy)return;
@@ -88,10 +117,10 @@ export function openTaskForm({ mode, task: suppliedTask, stage, stages, stageId,
       saveBusy=true;setSaving(true);
       await onSave({...values,labelIds:labels.getIds(),assigneeIds:assignees.getIds(),checklist:checklist.getItems(),expectedChecklist:creating?null:checklist.getOriginal(),requestId});
       if(!signal.aborted){finished=true;modal.close(creating?true:'saved');}
-    }catch(error){if(!signal.aborted){errorBox.textContent=error.message||'Could not save the task. Please try again.';errorBox.hidden=false;errorBox.scrollIntoView({block:'nearest'});}}
+    }catch(error){if(!signal.aborted){errorBox.textContent=error.message||'Could not save the task. Please try again.';errorBox.hidden=false;showError(error.message||'Could not save the task.');errorBox.scrollIntoView({block:'nearest'});}}
     finally{saveBusy=false;if(!signal.aborted)setSaving(false);}
   },{signal});
-  deleteButton.addEventListener('click',()=>{if(canLeave())modal.close('delete');},{signal});
+  deleteButton.addEventListener('click',async()=>{if(await canLeave())modal.close('delete');},{signal});
   element.addEventListener('shown.bs.modal',()=>fields.focus(),{signal});
   if(!creating){setupAttachments();setupComments();}
   setSaving(false);

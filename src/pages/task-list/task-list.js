@@ -1,3 +1,4 @@
+import { renderPriority } from '../../components/task-priority/task-priority.js';
 import html from './task-list.html?raw';
 import './task-list.css';
 import {renderFragment} from '../../utils/render.js';
@@ -31,7 +32,7 @@ export function mount(container,ctx) {
     const content=document.createElement('div');content.className='task-list-content';
     const link=document.createElement('a');link.className='task-list-title';link.textContent=task.title;link.href=`/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`;
     const context=document.createElement('div');context.className='task-list-context';context.textContent=[task.projects?.title,task.project_stages?.name].filter(Boolean).join(' · ');
-    content.append(link,context);const state=document.createElement('span');state.className='task-list-state';state.textContent=task.done?'Done':'Open';li.append(content,state);results.append(li);
+    content.append(link,context);const state=document.createElement('span');state.className='task-list-state';state.textContent=task.done?'Done':'Open';const priority=document.createElement('span');renderPriority(priority,task.priority);li.append(content,priority,state);results.append(li);
    }
    statusText.textContent=result.rows.length?'':result.total?`No tasks on this page. Use Previous to return to earlier results.`:`No matching ${status==='all'?'':status==='open'?'open ':'completed '}tasks. ${projectId?'Try clearing the filters.':'Tasks will appear here when you have access to them.'}`;
    renderPager(pager,{page,total:result.total,pageSize:TASK_LIST_PAGE_SIZE});

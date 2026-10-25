@@ -15,7 +15,7 @@ export const BOARD_RELOAD_LIMIT = 500;
 
 const byPositionThenId = (a, b) => a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-const TASK_COLUMNS = 'id, stage_id, title, description, position, done, due_at, created_at, updated_at, task_labels(project_labels(id, name, colour)), task_attachments(count), task_comments(count)';
+const TASK_COLUMNS = 'id, stage_id, title, description, position, done, priority, due_at, created_at, updated_at, task_labels(project_labels(id, name, colour)), task_attachments(count), task_comments(count)';
 
 const mapTask = (task) => ({
   labels: (task.task_labels ?? []).map((row) => row.project_labels).filter(Boolean),
@@ -26,6 +26,7 @@ const mapTask = (task) => ({
   description: task.description ?? '',
   position: task.position,
   done: task.done,
+  priority: task.priority,
   dueAt: task.due_at,
   createdAt: task.created_at,
   updatedAt: task.updated_at,

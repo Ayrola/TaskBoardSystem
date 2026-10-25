@@ -8,7 +8,7 @@
   const storedStages=sessionStorage.getItem('taskboard-stages-fixture');
   if(storedStages)stages.splice(0,stages.length,...JSON.parse(storedStages));
   const names=['Design the onboarding flow','Improve dashboard performance','Review project permissions','Polish responsive navigation','Write release notes','Audit keyboard interaction','Simplify account settings','Prepare the next milestone'];
-  const tasks=Array.from({length:58},(_,i)=>({id:id(100+i),project_id:id(10),stage_id:id(11),title:i===57?'Needle task beyond the first page':names[i%names.length]+(i>7?` ${i+1}`:''),description:i===0?'<p>Map the first-run experience and make every step feel clear.</p>':i===1?'<p>Long description with &amp; safe content. '+ 'A clear, readable preview. '.repeat(30)+'</p>':i%3===0?'<p>Ship a focused improvement with clear acceptance criteria.</p>':'',position:i,done:false,due_at:i===0?'2020-01-01T12:00:00Z':null,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),task_labels:i%4===0?[{project_labels:{id:id(31),name:'Product',colour:'#dce9ff'}}]:[],task_attachments:[{count:i===0?2:0}],task_comments:[{count:i===0?3:0}]}));
+  const tasks=Array.from({length:58},(_,i)=>({id:id(100+i),project_id:id(10),stage_id:id(11),title:i===57?'Needle task beyond the first page':names[i%names.length]+(i>7?` ${i+1}`:''),description:i===0?'<p>Map the first-run experience and make every step feel clear.</p>':i===1?'<p>Long description with &amp; safe content. '+ 'A clear, readable preview. '.repeat(30)+'</p>':i%3===0?'<p>Ship a focused improvement with clear acceptance criteria.</p>':'',position:i,done:false,priority:'medium',due_at:i===0?'2020-01-01T12:00:00Z':null,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),task_labels:i%4===0?[{project_labels:{id:id(31),name:'Product',colour:'#dce9ff'}}]:[],task_attachments:[{count:i===0?2:0}],task_comments:[{count:i===0?3:0}]}));
   tasks.push(...[0,1,2].map((i)=>({...tasks[i],id:id(200+i),stage_id:i===2?id(14):id(12),position:i===2?0:i,done:i===2,title:['Build the shared design system','Accessibility review','Launch project workspace'][i]})));
   const stored=sessionStorage.getItem('taskboard-browser-fixture');
   if(stored)tasks.splice(0,tasks.length,...JSON.parse(stored));
@@ -63,7 +63,7 @@
       const today=day(now),midnight=new Date(today+'T12:00:00Z');
       const creation=Array.from({length:body.p_days},(_,i)=>{const d=new Date(midnight);d.setUTCDate(d.getUTCDate()-body.p_days+1+i);const key=d.toISOString().slice(0,10);return {day:key,count:list.filter(t=>day(new Date(t.created_at))===key&&Date.parse(t.created_at)<=now).length};});
       const due=open.filter(t=>t.due_at).sort((a,b)=>a.due_at.localeCompare(b.due_at)||a.id.localeCompare(b.id));
-      return respond({as_of:now.toISOString(),timezone:body.p_timezone,days:body.p_days,totals:{total:list.length,open:open.length,completed:list.length-open.length,overdue:open.filter(t=>t.due_at&&new Date(t.due_at)<now).length,unassigned:open.filter(t=>!assignments(t).length).length},stages:projectStages.map(s=>({...s,count:list.filter(t=>t.stage_id===s.id).length})),creation,workload:[...people.values()].sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label)),deadlines:{overdue:due.filter(t=>new Date(t.due_at)<now).slice(0,5),upcoming:due.filter(t=>new Date(t.due_at)>=now).slice(0,5)},activity:mock.zeroDashboard?[]:mock.dashboardActivity??[{id:'1',task_id:list[0]?.id,task_title:list[0]?.title??'Deleted task',task_exists:!!list[0],event_type:'created',changes:{},created_at:now.toISOString()}]});
+      return respond({as_of:now.toISOString(),timezone:body.p_timezone,days:body.p_days,totals:{total:list.length,open:open.length,completed:list.length-open.length,high_open:open.filter(t=>t.priority==='high').length,urgent_open:open.filter(t=>t.priority==='urgent').length,overdue:open.filter(t=>t.due_at&&new Date(t.due_at)<now).length,unassigned:open.filter(t=>!assignments(t).length).length},priorities:['low','medium','high','urgent'].map(priority=>({priority,count:list.filter(t=>(t.priority??'medium')===priority).length,open_count:open.filter(t=>(t.priority??'medium')===priority).length})),stages:projectStages.map(s=>({...s,count:list.filter(t=>t.stage_id===s.id).length})),creation,workload:[...people.values()].sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label)),deadlines:{overdue:due.filter(t=>new Date(t.due_at)<now).slice(0,5),upcoming:due.filter(t=>new Date(t.due_at)>=now).slice(0,5)},activity:mock.zeroDashboard?[]:mock.dashboardActivity??[{id:'1',task_id:list[0]?.id,task_title:list[0]?.title??'Deleted task',task_exists:!!list[0],event_type:'created',changes:{},created_at:now.toISOString()}]});
     }
     if(path==='is_admin')return respond(mock.admin??false);
     if(path==='browse_projects_page'){
@@ -116,22 +116,22 @@
       const values=body.p_values;let task=body.p_task_id?tasks.find(t=>t.id===body.p_task_id):null;
       if(!task){task={...tasks[0],id:id(500+tasks.length),project_id:body.p_project_id,stage_id:values.stage_id,position:tasks.filter(t=>t.stage_id===values.stage_id).length};tasks.push(task);}
       const source=task.stage_id;if(source!==values.stage_id){task.position=tasks.filter(t=>t.stage_id===values.stage_id).length;tasks.filter(t=>t.stage_id===source&&t.id!==task.id).forEach((t,i)=>t.position=i);}
-      Object.assign(task,{title:values.title,description:values.description,stage_id:values.stage_id,due_at:values.due_at,done:stages.find(s=>s.id===values.stage_id).is_done,task_labels:values.label_ids.map(label=>({project_labels:{id:label,name:'Product',colour:'#dce9ff'}}))});
+      Object.assign(task,{priority:values.priority??task.priority??'medium',title:values.title,description:values.description,stage_id:values.stage_id,due_at:values.due_at,done:stages.find(s=>s.id===values.stage_id).is_done,task_labels:values.label_ids.map(label=>({project_labels:{id:label,name:'Product',colour:'#dce9ff'}}))});
       (mock.formLabels??={})[task.id]=values.label_ids;(mock.formAssignees??={})[task.id]=values.assignee_ids.map(user_id=>({task_id:task.id,user_id,label:'Alex Morgan'}));
       (mock.formChecklists??={})[task.id]=values.checklist.map((item,i)=>({...item,id:item.id??id(7000+i),position:i}));
       if(!body.p_task_id)mock.formReceipts[body.p_request_id]=task.id;
       persist();persistForm();
       if(mock.commitThenFail){mock.commitThenFail=false;return respond({message:'Lost response'},500);}return respond(task.id);
     }
-    if(path==='create_task_with_deadline'){
+    if(path==='create_task_with_deadline'||path==='create_task_with_priority'){
       if(mock.failSave)return respond({message:'Preview save failure'},500);
-      const task={...tasks[0],id:id(500+tasks.length),stage_id:body.p_stage_id,title:body.p_title,description:body.p_description,due_at:body.p_due_at,task_labels:[],position:tasks.filter(t=>t.stage_id===body.p_stage_id).length};tasks.push(task);persist();return respond(task.id);
+      const task={...tasks[0],id:id(500+tasks.length),stage_id:body.p_stage_id,title:body.p_title,description:body.p_description,priority:body.p_priority??'medium',due_at:body.p_due_at,task_labels:[],position:tasks.filter(t=>t.stage_id===body.p_stage_id).length};tasks.push(task);persist();return respond(task.id);
     }
-    if(path==='update_task_with_deadline'||path==='update_task'){
+    if(path==='update_task_with_deadline'||path==='update_task'||path==='update_task_with_priority'){
       if(mock.failSave)return respond({message:'Preview save failure'},500);
       const task=tasks.find(t=>t.id===body.p_task_id);const source=task.stage_id;
       if(body.p_stage_id && body.p_stage_id!==source){task.position=tasks.filter(t=>t.stage_id===body.p_stage_id).length;task.stage_id=body.p_stage_id;tasks.filter(t=>t.stage_id===source).sort((a,b)=>a.position-b.position).forEach((t,i)=>t.position=i);}
-      Object.assign(task,{title:body.p_title,description:body.p_description,done:stages.find(s=>s.id===task.stage_id).is_done,due_at:body.p_due_at===undefined?task.due_at:body.p_due_at});persist();return respond(null);
+      Object.assign(task,{priority:body.p_priority??task.priority??'medium',title:body.p_title,description:body.p_description,done:stages.find(s=>s.id===task.stage_id).is_done,due_at:body.p_due_at===undefined?task.due_at:body.p_due_at});persist();return respond(null);
     }
     if(path==='delete_task'){const index=tasks.findIndex(t=>t.id===body.p_task_id);tasks.splice(index,1);persist();return respond(body.p_task_id);}
     if(path==='move_task_relative'){

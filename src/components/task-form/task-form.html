@@ -11,6 +11,11 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <section class="alert alert-warning" role="alertdialog" aria-labelledby="task-discard-title" tabindex="-1" data-discard-confirm hidden>
+          <h3 class="h6" id="task-discard-title">Discard unsaved task changes?</h3>
+          <p>Your task draft, including priority, has not been saved.</p>
+          <div class="d-flex gap-2"><button type="button" class="btn btn-outline-secondary" data-keep-editing>Keep editing</button><button type="button" class="btn btn-danger" data-discard-changes>Discard changes</button></div>
+        </section>
         <div class="task-detail-layout">
           <div class="task-detail-main">
             <section class="task-overview" aria-label="Task overview">
@@ -19,6 +24,11 @@
           <span class="badge text-bg-success" data-done-badge hidden><i class="bi bi-check-circle" aria-hidden="true"></i> Done</span>
         </p>
         <div class="task-popup-properties">
+          <div>
+            <label class="form-label" for="task-priority">Priority</label>
+            <select id="task-priority" form="task-editor-form" class="form-select" data-priority-input aria-describedby="task-priority-error"></select>
+            <span data-priority-indicator></span><div id="task-priority-error" class="invalid-feedback d-block" data-priority-error></div>
+          </div>
           <div>
             <label class="form-label" for="task-view-stage">Stage</label>
             <select id="task-view-stage" name="stage" form="task-editor-form" class="form-select" data-stage-input aria-describedby="task-view-stage-error task-view-stage-hint"></select>

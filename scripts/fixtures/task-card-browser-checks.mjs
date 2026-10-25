@@ -8,7 +8,7 @@ export async function checkTaskCardsBrowser({evaluate,send,wait,saveScreenshot,e
  await check(`document.querySelectorAll('[data-task-id="00000000-0000-0000-0000-000000000100"] .task-avatar').length===3 && document.querySelector('.task-avatar-overflow').textContent==='+2'`,'Two assignees and overflow');
  await check(`!window.__cardXss && !document.querySelector('.task-card script')`,'Rich description becomes safe plain text');
  await check(`document.querySelector('[data-task-id="00000000-0000-0000-0000-000000000100"] [data-deadline]').classList.contains('is-overdue') && !document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000014"] [data-deadline]').classList.contains('is-overdue')`,'Only unfinished tasks appear overdue');
- await check(`!document.querySelector('[data-task-id="00000000-0000-0000-0000-000000000101"] [data-deadline]').classList.contains('is-overdue') && document.querySelector('[data-task-id="00000000-0000-0000-0000-000000000102"] [data-card-meta]').hidden`,'Upcoming deadline and empty metadata state');
+ await check(`!document.querySelector('[data-task-id="00000000-0000-0000-0000-000000000101"] [data-deadline]').classList.contains('is-overdue') && document.querySelector('[data-task-id="00000000-0000-0000-0000-000000000102"] [data-task-priority]').dataset.priority==='medium'`,'Upcoming deadline and empty metadata state');
  await evaluate(`document.querySelector('.task-card [data-open-task]').focus({preventScroll:true})`);
  await check(`!document.querySelector('[data-drag-handle]')`,'No obsolete drag grip');
  await check(`getComputedStyle(document.querySelector('.task-card')).borderRadius==='12px' && getComputedStyle(document.querySelector('.task-excerpt')).webkitLineClamp==='2'`,'Card radius and excerpt clamp');
@@ -17,7 +17,7 @@ export async function checkTaskCardsBrowser({evaluate,send,wait,saveScreenshot,e
  }
  await evaluate(`document.querySelector('[data-card-descriptions]').checked=false;document.querySelector('[data-card-descriptions]').dispatchEvent(new Event('change',{bubbles:true}))`);
  await check(`getComputedStyle(document.querySelector('.task-excerpt')).display==='none'`,'Description preference hides preview');
- await send('Page.reload',{ignoreCache:true});await wait(`document.querySelectorAll('.task-card').length===53`);
+ await evaluate(`window.__cardReloadMarker=true`);await send('Page.reload',{ignoreCache:true});await wait(`window.__cardReloadMarker===undefined && document.querySelectorAll('.task-card').length===53 && document.querySelector('.page-tasks')?.getAttribute('aria-busy')==='false'`);
  await check(`document.querySelector('.page-tasks').dataset.density==='compact' && document.querySelector('.page-tasks').dataset.descriptions==='hide'`,'Display preferences survive reload');
  await evaluate(`document.querySelector('[data-card-descriptions]').checked=true;document.querySelector('[data-card-descriptions]').dispatchEvent(new Event('change',{bubbles:true}))`);await change('[data-card-density]','comfortable');
  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});

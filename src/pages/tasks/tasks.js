@@ -1,3 +1,4 @@
+import { parsePriorities, sortBoardTasks, PRIORITY_META } from '../../utils/priorities.js';
 import { createTaskCard, renderCardDeadline } from '../../components/task-card/task-card.js';
 import { readBoardDisplay, saveBoardDisplay, BOARD_DISPLAY_KEY } from '../../services/board-display-service.js';
 import { EMPTY_BOARD_FILTERS, boardFiltersFromQuery, hasBoardFilters, matchesBoardTask } from '../../utils/board-filters.js';
@@ -39,14 +40,14 @@ export function mount(container, ctx) {
   const searchInput = root.querySelector('[data-search]');
   const filterStatus = root.querySelector('[data-filter-status]');
   searchInput.value = filters.search;
-  for (const select of root.querySelectorAll('[data-filter]')) if (filters[select.dataset.filter]) select.value = filters[select.dataset.filter];
+  syncFilterControls();
   const descriptionCache = new WeakMap();
   const filtered = () => hasBoardFilters(filters);
   const plainDescription = (task) => {
     if (!descriptionCache.has(task)) descriptionCache.set(task, htmlToExcerpt(task.description, Infinity));
     return descriptionCache.get(task);
   };
-  const visibleTasks = (stage) => stage.tasks.filter(task => matchesBoardTask(task, stage.id, filters, plainDescription(task)));
+  const visibleTasks = (stage) => sortBoardTasks(stage.tasks.filter(task => matchesBoardTask(task, stage.id, filters, plainDescription(task))), filters.sort);
   let requestId = 0;
   let linkedTaskOpened = false;
   // Bumped whenever cursors may have become invalid (a reload starts, a move, a realtime change). A page
@@ -184,12 +185,24 @@ export function mount(container, ctx) {
     }
   }
 
+  function syncFilterControls(){
+    for(const select of root.querySelectorAll('[data-filter]'))select.value=filters[select.dataset.filter];
+    for(const checkbox of root.querySelectorAll('[data-priority-filter]'))checkbox.checked=parsePriorities(filters.priority).includes(checkbox.value);
+  }
   function updateToolbar() {
     const active = filtered(); root.classList.toggle('is-filtered', active);
     root.querySelector('[data-drag-notice]').hidden = !active;
+    root.querySelector('[data-drag-notice]').textContent = filters.sort ? 'Priority sorting changes the displayed order only. Drag reordering is paused; switch to Manual board order and clear filters to drag. Use a task’s Move action to change its saved position.' : 'Dragging is paused while filters are active to protect saved ordering. Use a task’s Move action instead.';
     const chips = root.querySelector('[data-filter-chips]'); chips.replaceChildren();
     for (const [key, value] of Object.entries(filters)) {
       if (!value.trim()) continue;
+      if (key === 'priority') {
+        for (const priority of parsePriorities(value)) {
+          const chip=document.createElement('span');chip.className='board-filter-chip';chip.append(document.createTextNode(`Priority: ${PRIORITY_META[priority].label}`));
+          const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.dataset.clearPriority=priority;remove.setAttribute('aria-label',`Remove priority ${PRIORITY_META[priority].label}`);chip.append(remove);chips.append(chip);
+        }
+        continue;
+      }
       const chip = document.createElement('span'); chip.className = 'board-filter-chip';
       const select = root.querySelector(`[data-filter="${key}"]`);
       const label = key === 'search' ? `Search: ${value}` : `${key[0].toUpperCase()+key.slice(1)}: ${select?.selectedOptions[0]?.textContent ?? value}`;
@@ -239,18 +252,21 @@ export function mount(container, ctx) {
       for (const sortable of sortables) sortable.option('disabled', moving || filtered() || activeLoads > 0);
     });
     ctx.cleanup.listen(root.querySelector('[data-filter-controls]'), 'change', event => {
+      if(event.target.matches('[data-priority-filter]')){filters.priority=[...root.querySelectorAll('[data-priority-filter]:checked')].map(input=>input.value).join(',');clearTimeout(filterTimer);applyFilters();return;}
       if (!event.target.dataset.filter) return;
       filters[event.target.dataset.filter] = event.target.value;
       clearTimeout(filterTimer); applyFilters();
     });
     ctx.cleanup.listen(root, 'click', event => {
       const clear = event.target.closest('[data-clear-filters]');
+      const priorityChip=event.target.closest('[data-clear-priority]');
+      if(priorityChip){filters.priority=parsePriorities(filters.priority).filter(value=>value!==priorityChip.dataset.clearPriority).join(',');syncFilterControls();applyFilters();searchInput.focus();return;}
       const chip = event.target.closest('[data-clear-filter]');
       if (clear || chip) {
         clearTimeout(filterTimer);
         if (clear) Object.assign(filters, EMPTY_BOARD_FILTERS); else filters[chip.dataset.clearFilter] = '';
         searchInput.value = filters.search;
-        for (const select of root.querySelectorAll('[data-filter]')) select.value = filters[select.dataset.filter];
+        syncFilterControls();
         applyFilters(); searchInput.focus();
       }
     });

@@ -35,7 +35,9 @@
     "test:project-dashboard": "node scripts/test-project-dashboard.mjs",
     "test:reports": "node scripts/test-report-metrics.mjs && node scripts/test-report-data.mjs",
     "test:reports:browser": "BOARD_CHECK_PDF=1 node scripts/test-board-browser.mjs",
-    "reports:samples": "node scripts/generate-report-samples.mjs"
+    "reports:samples": "node scripts/generate-report-samples.mjs",
+    "test:priority": "node scripts/test-task-priority.mjs && node scripts/test-priority-filters.mjs",
+    "test:priority:browser": "BOARD_CHECK_PRIORITY=1 node scripts/test-board-browser.mjs"
   },
   "keywords": [],
   "author": "",

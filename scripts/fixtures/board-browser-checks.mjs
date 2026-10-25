@@ -28,7 +28,7 @@ await evaluate(`window.__todaySaveCount=__boardMock.calls.filter(c=>c.path==='sa
 assert(await evaluate(`(()=>{const d=new Date();const local=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');return document.querySelector('#task-view-deadline').value===local+'T09:45' && __boardMock.calls.filter(c=>c.path==='save_task_form').length===__todaySaveCount;})()`),'Today preserves time without saving');
 await click('.task-view-modal [data-clear-deadline]');await click('.task-view-modal [data-deadline-today]');
 assert(await evaluate(`document.querySelector('#task-view-deadline').value.endsWith('T17:00')`),'Empty deadline defaults to 17:00');
-await click('.task-view-modal [data-bs-dismiss="modal"]');await settled();
+await click('.task-view-modal [data-bs-dismiss="modal"]');if(await evaluate(`!document.querySelector('[data-discard-confirm]')?.hidden`))await click('[data-discard-changes]');await settled();
 assert(await evaluate(`__boardMock.calls.filter(c=>c.path==='save_task_form').length===__todaySaveCount`),'Cancel does not save Today');
 await click('.task-card [data-open-task]');await wait(`document.activeElement.matches('#task-view-title-input')`);
 await click('.task-view-modal [data-deadline-today]');await evaluate(`window.__todayExpected=document.querySelector('#task-view-deadline').value;window.__todayTitle=document.querySelector('#task-view-title-input').value`);
@@ -123,7 +123,7 @@ await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
 await wait(`document.querySelector('.task-view-modal.show') && document.activeElement.matches('#task-view-title-input')`);
 assert(await evaluate(`(()=>{const r=document.querySelector('.task-view-modal .modal-content').getBoundingClientRect();return r.width<=innerWidth&&r.height<=innerHeight;})()`),'Mobile dialog inside viewport');
 await saveScreenshot('mobile-details.png');
-await click('.task-view-modal [data-bs-dismiss="modal"]');await settled();
+await click('.task-view-modal [data-bs-dismiss="modal"]');if(await evaluate(`!document.querySelector('[data-discard-confirm]')?.hidden`))await click('[data-discard-changes]');await settled();
 // Realtime refresh and existing permission hints.
 await evaluate(`window.__boardMock.member=true`);await broadcast();await wait(`document.querySelector('[data-link="edit"]').hidden===true`);
 assert(await evaluate(`document.querySelector('[data-link="users"]').hidden && !document.querySelector('[data-add-primary]').hidden`),'Member actions respect permissions');

@@ -40,11 +40,11 @@ export function buildPdfDocument(m, options) {
     if(m.stages.length)content.push(m.totals.total?bars(m.stages,m.totals.total):table(['Stage','Tasks','Share'],m.stages.map(s=>[s.name,0,'0%']),['*',80,80]));else content.push(para('No stages yet.'));
     content.push(para('Labels',{style:'h2'}),note('Multi-label tasks appear in each label category; category sums may exceed the number of unique tasks.'));
     content.push(m.totals.total?bars([...m.labels,{name:'Unlabelled',count:m.totals.unlabelled}],m.totals.total):para('No current tasks; no label distribution chart is drawn.'));
-    content.push(note('Priority distribution is unavailable: this application does not store task priorities.'));
+    content.push(para('Priority',{style:'h2'}),note('Saved importance across current tasks. Priority does not make work overdue.'),bars(m.priorities,m.totals.total));
   }
   if(selected.has('deadlines')){
     content.push(heading('deadlines'),table(['Overdue open','Due soon','Open without deadline'],[[m.totals.overdue,m.totals.dueSoon,m.totals.noDeadline]],['*','*','*']),note(`Due soon: snapshot through, but excluding, ${formatted(m.meta.due_soon_before)} (next 168 hours). Completed tasks are excluded.`));
-    if(m.overdue.length)content.push(table(['Overdue task','Stage','Assignees','Deadline'],m.overdue.map(t=>[t.title,t.stageName,bounded(t,'assignees'),formatted(t.due_at)]),['*',64,100,86]));else content.push(para('No overdue open work.'));
+    if(m.overdue.length)content.push(table(['Overdue task','Stage / priority','Assignees','Deadline'],m.overdue.map(t=>[t.title,`${t.stageName}\n${t.priorityName}`,bounded(t,'assignees'),formatted(t.due_at)]),['*',64,100,86]));else content.push(para('No overdue open work.'));
   }
   if(selected.has('workload')){
     content.push(heading('workload'),para(`${m.totals.assignedOpen} assigned open tasks · ${m.totals.unassignedOpen} unassigned open tasks.`),note('Each task is counted for every assigned person. These figures describe work allocation, not employee productivity. People are listed alphabetically.'));
@@ -64,8 +64,8 @@ export function buildPdfDocument(m, options) {
   }
   if(selected.has('register')){
     content.push(heading('register'),note('All current retained tasks, ordered by creation timestamp then ID. Completion dates are recorded transitions only; currently reopened tasks show no current completion date.'));
-    if(m.register.length)content.push(table(['Task / reference','Stage / state','Assignees','Labels','Dates'],m.register.map(t=>[
-      {text:[{text:t.title,bold:true},`\n${t.id.slice(-8)}`]},`${t.stageName}\n${t.done?'Completed':'Open'}`,bounded(t,'assignees'),bounded(t,'labels'),`Created: ${formatted(t.created_at)}\nDue: ${t.due_at?formatted(t.due_at):'No deadline'}\nCompleted: ${formatted(t.completed_at)}`
+    if(m.register.length)content.push(table(['Task / reference','Stage / state / priority','Assignees','Labels','Dates'],m.register.map(t=>[
+      {text:[{text:t.title,bold:true},`\n${t.id.slice(-8)}`]},`${t.stageName}\n${t.done?'Completed':'Open'}\nPriority: ${t.priorityName}`,bounded(t,'assignees'),bounded(t,'labels'),`Created: ${formatted(t.created_at)}\nDue: ${t.due_at?formatted(t.due_at):'No deadline'}\nCompleted: ${formatted(t.completed_at)}`
     ]),['*',64,84,76,112],{fontSize:7.5}));else content.push(para('No retained tasks to list.'));
   }
   if(selected.has('findings')){content.push(heading('findings'),...m.findings.map(text=>para(`• ${text}`)));}

@@ -21,6 +21,7 @@ for path in sorted(folder.glob('*.pdf')):
         for page in doc:
             if re.search(r'^\d{8}$',page.get_text(),re.M):
                 assert 'Task / reference' in page.get_text(), 'Missing repeated register header'
+    if path.name=='priorities.pdf':assert 'Priority: Urgent' in text and 'Priority: High' in text and 'Saved importance' in text
     if path.name=='cjk-and-bulgarian.pdf':assert '工作计划' in text, 'CJK text missing'
     if path.name=='long-relations.pdf':assert 'Relation appendix' in text and 'Член 29' in text
     print(f'PASS {path.name}: {len(doc)} pages, selectable Unicode, embedded fonts, margins and page numbers')

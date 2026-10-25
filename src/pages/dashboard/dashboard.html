@@ -13,11 +13,17 @@
     <p class="dashboard-refreshed" role="status" aria-live="polite" data-refreshed>Waiting for data…</p>
   </div>
   <div class="dashboard-error alert alert-danger" role="alert" data-error hidden><p class="mb-2" data-error-text></p><button type="button" class="btn btn-outline-danger btn-sm" data-retry>Retry</button></div>
-  <div data-loading role="status"><span class="visually-hidden">Loading project dashboard…</span><div class="dashboard-skeleton-cards" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="dashboard-skeleton-panels" aria-hidden="true"><span></span><span></span></div></div>
+  <div data-loading role="status"><span class="visually-hidden">Loading project dashboard…</span><div class="dashboard-skeleton-cards" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="dashboard-skeleton-panels" aria-hidden="true"><span></span><span></span></div></div>
   <div data-content hidden>
     <div class="dashboard-summary" data-summary-cards></div>
     <div class="dashboard-empty" data-empty hidden><div><h2>No tasks yet</h2><p>Your project overview will grow as you add work.</p></div><a class="btn btn-primary" data-add-task>Add Task</a></div>
     <div class="dashboard-grid">
+      <section class="dashboard-widget dashboard-priorities" aria-labelledby="dashboard-priority-title">
+        <div class="dashboard-widget-heading"><h2 id="dashboard-priority-title">Priority Distribution</h2><span>Current totals</span></div>
+        <p class="dashboard-caption">Priority expresses importance, not a deadline. Select a priority to view its tasks.</p>
+        <div class="dashboard-chart" style="height:180px"><canvas data-chart="priorities" role="img" aria-label="Current task counts by priority. Exact values and links follow."></canvas></div>
+        <table class="dashboard-table"><caption class="visually-hidden">Priority distribution across all current project tasks</caption><thead><tr><th scope="col">Priority</th><th scope="col">Tasks</th><th scope="col">Share</th><th scope="col">Open</th></tr></thead><tbody data-priority-table></tbody></table>
+      </section>
       <section class="dashboard-widget dashboard-stages" aria-labelledby="dashboard-stage-title">
         <div class="dashboard-widget-heading"><h2 id="dashboard-stage-title">Tasks by Stage</h2><span>Current totals</span></div>
         <p class="dashboard-caption">Select a stage to view its tasks. Percentages are of all current project tasks.</p>

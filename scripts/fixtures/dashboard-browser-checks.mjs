@@ -5,13 +5,13 @@ export async function checkDashboardBrowser({evaluate,send,wait,saveScreenshot,e
  const click=s=>evaluate(`document.querySelector(${JSON.stringify(s)}).click()`);
  const value=(s,v,event='change')=>evaluate(`(()=>{const i=document.querySelector(${JSON.stringify(s)});i.value=${JSON.stringify(v)};i.dispatchEvent(new Event(${JSON.stringify(event)},{bubbles:true}));})()`);
  const go=path=>evaluate(`(()=>{const a=document.createElement('a');a.href=${JSON.stringify(path)};document.body.append(a);a.click();a.remove();})()`);
- const ready=()=>wait(`document.querySelector('.page-dashboard')?.getAttribute('aria-busy')==='false' && document.querySelectorAll('.summary-card').length===6`);
+ const ready=()=>wait(`document.querySelector('.page-dashboard')?.getAttribute('aria-busy')==='false' && document.querySelectorAll('.summary-card').length===8`);
  const boardReady=()=>wait(`document.querySelector('.page-tasks')?.getAttribute('aria-busy')==='false' && document.querySelector('[data-state="board"]')?.hidden===false`);
  const broadcast=()=>evaluate(`__mockSocket.emit('message',new MessageEvent('message',{data:JSON.stringify([null,null,'realtime:project:00000000-0000-0000-0000-000000000010:board','broadcast',{event:'project_changed',payload:{project_id:'00000000-0000-0000-0000-000000000010'},type:'broadcast'}])}))`);
  await evaluate(`__boardMock.formAssignees={[__boardMock.tasks[0].id]:[{user_id:__boardMock.id(1),label:'Alex Morgan'},{user_id:__boardMock.id(2),label:'Sam Reed'}]};__boardMock.tasks[1].due_at='2030-01-01T12:00:00Z';`);
  await click(`.app-sidebar a[href="${base}/dashboard"]`);await ready();
  await check(`document.querySelector('.app-sidebar a[aria-current="page"]').href.endsWith('/dashboard') && document.querySelector('[data-project-name]').textContent==='Product workspace'`,'Project name and active sidebar');
- await check(`document.querySelectorAll('canvas').length===3 && document.querySelectorAll('[data-stage-table] tr').length===4 && document.querySelectorAll('[data-creation-table] tr').length===30`,'Charts and accessible tables');
+ await check(`document.querySelectorAll('canvas').length===4 && document.querySelectorAll('[data-stage-table] tr').length===4 && document.querySelectorAll('[data-creation-table] tr').length===30`,'Charts and accessible tables');
  await check(`document.querySelector('[data-summary-cards]').textContent.includes('61') && document.querySelector('[data-summary-cards]').textContent.includes('60') && document.querySelector('[data-summary-cards]').textContent.includes('1.6%')`,'Current totals include unloaded tasks');
  await check(`document.querySelectorAll('[data-workload] li').length===3 && document.querySelector('[data-overdue]').textContent.includes('Design the onboarding') && document.querySelector('[data-upcoming]').textContent.includes('Improve dashboard')`,'Multi-assignee workload and separate deadlines');
  await check(`__boardMock.calls.filter(c=>c.path==='project_dashboard').length===1`,'One request for all analytics');
@@ -33,12 +33,13 @@ export async function checkDashboardBrowser({evaluate,send,wait,saveScreenshot,e
  await go(`${base}/dashboard`);await ready();
  // Exercise the canvas click as well as its keyboard-accessible table alternative.
  await evaluate(`window.__dashboardBeforeCharts=__boardMock.calls.length`);
+ await evaluate(`document.querySelector('[data-chart="stages"]').scrollIntoView({block:'center',behavior:'instant'})`);await new Promise(r=>setTimeout(r,100));
  const point=await evaluate(`(()=>{const c=document.querySelector('[data-chart="stages"]'),r=c.getBoundingClientRect();return{x:r.x+r.width*.5,y:r.y+35};})()`);
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1});
  await boardReady();await go(`${base}/dashboard`);await ready();
  await evaluate(`__boardMock.failDashboard=true;__boardMock.delayDashboard=150`);await click('[data-refresh]');
  await check(`!document.querySelector('[data-content]').hidden`,'Background refresh keeps snapshot');
- await wait(`!document.querySelector('[data-error]').hidden`);await check(`document.querySelector('[data-refreshed]').textContent.includes('Refresh failed') && document.querySelectorAll('.summary-card').length===6`,'Background failure preserves last good data');
+ await wait(`!document.querySelector('[data-error]').hidden`);await check(`document.querySelector('[data-refreshed]').textContent.includes('Refresh failed') && document.querySelectorAll('.summary-card').length===8`,'Background failure preserves last good data');
  await evaluate(`__boardMock.failDashboard=false;__boardMock.delayDashboard=0`);await click('[data-retry]');await ready();
  await value('[data-period]','7');await ready();
  await evaluate(`window.__dashboardRequestCount=__boardMock.calls.filter(c=>c.path==='project_dashboard').length;window.__dashboardHistoryLength=history.length`);
@@ -65,7 +66,7 @@ export async function checkDashboardBrowser({evaluate,send,wait,saveScreenshot,e
  await wait(`document.querySelector('main')?.textContent.includes('Project unavailable')`);
  await evaluate(`__boardMock.denied=false`);await go(`${base}/dashboard`);await ready();
  await check(`!document.querySelector('[data-content]').hidden`,'Reselecting Dashboard recovers after project context failed before page mount');
- await send('Page.reload',{ignoreCache:true});await wait(`typeof window.__dashboardBeforeCharts==='undefined' && document.querySelectorAll('.summary-card').length===6 && document.querySelector('.page-dashboard')?.getAttribute('aria-busy')==='false'`);
+ await send('Page.reload',{ignoreCache:true});await wait(`typeof window.__dashboardBeforeCharts==='undefined' && document.querySelectorAll('.summary-card').length===8 && document.querySelector('.page-dashboard')?.getAttribute('aria-busy')==='false'`);
  await check(`document.querySelector('[data-dashboard-link]').getAttribute('aria-current')==='page'`,'Direct URL loading');
  await go('/dashboard');await ready();await check(`location.pathname==='${base}/dashboard'`,'Existing global dashboard entry preserved');
  await evaluate(`__boardMock.delayDashboard=400`);await click('[data-refresh]');await go(`${base}/tasks`);await boardReady();await new Promise(r=>setTimeout(r,500));await check(`!!document.querySelector('.page-tasks') && !document.querySelector('.page-dashboard')`,'Leaving page ignores delayed responses and releases charts');

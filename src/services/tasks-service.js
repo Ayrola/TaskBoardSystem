@@ -1,3 +1,4 @@
+import { requirePriority } from '../utils/priorities.js';
 import { supabaseClient } from './supabase-client.js';
 import { isUuid } from '../utils/validation.js';
 import { sanitizeRichText, RICH_TEXT_MAX_LENGTH } from '../utils/sanitize.js';
@@ -21,10 +22,11 @@ function prepareDescription(value) {
 }
 
 // New tasks are appended to the end of the stage by the database (serialized per project).
-export async function createTask({ projectId, stageId, title, description, dueAt = null }) {
+export async function createTask({ projectId, stageId, title, description, dueAt = null, priority = 'medium' }) {
   if (!isUuid(projectId) || !isUuid(stageId)) throw new TaskNotFoundError();
 
-  const { data, error } = await supabaseClient.rpc('create_task_with_deadline', {
+  const { data, error } = await supabaseClient.rpc('create_task_with_priority', {
+    p_priority: requirePriority(priority),
     p_due_at: dueAt,
     p_project_id: projectId,
     p_stage_id: stageId,
@@ -37,10 +39,11 @@ export async function createTask({ projectId, stageId, title, description, dueAt
 }
 
 // Changing the stage moves the task to the end of the new stage; `done` follows the stage in the database.
-export async function updateTask(taskId, { stageId, title, description, dueAt }) {
+export async function updateTask(taskId, { stageId, title, description, dueAt, priority }) {
   if (!isUuid(taskId) || (stageId !== null && !isUuid(stageId))) throw new TaskNotFoundError();
 
-  const { error } = await supabaseClient.rpc(dueAt === undefined ? 'update_task' : 'update_task_with_deadline', {
+  const { error } = await supabaseClient.rpc(priority === undefined ? (dueAt === undefined ? 'update_task' : 'update_task_with_deadline') : 'update_task_with_priority', {
+    ...(priority === undefined ? {} : { p_priority: requirePriority(priority), p_due_at: dueAt ?? null, p_preserve_deadline: dueAt === undefined }),
     ...(dueAt === undefined ? {} : { p_due_at: dueAt }),
     p_task_id: taskId,
     p_title: title.trim(),
@@ -109,22 +112,22 @@ export async function moveTask({ taskId, stageId, afterTaskId = null, toEnd = fa
 // Used by links from paginated label results, including tasks outside the board's loaded pages.
 export async function getTask(taskId, { projectId, signal } = {}) {
   if (!isUuid(taskId) || !isUuid(projectId)) throw new TaskNotFoundError();
-  let query = supabaseClient.from('tasks').select('id, project_id, stage_id, title, description, done, due_at, created_at, updated_at').eq('id', taskId).eq('project_id', projectId).maybeSingle();
+  let query = supabaseClient.from('tasks').select('id, project_id, stage_id, title, description, done, priority, due_at, created_at, updated_at').eq('id', taskId).eq('project_id', projectId).maybeSingle();
   if (signal) query = query.abortSignal(signal);
   const { data, error } = await query;
   if (error) throw new Error('Could not load the task.');
   if (!data) throw new TaskNotFoundError();
   return { id: data.id, projectId: data.project_id, stageId: data.stage_id, title: data.title,
-    description: data.description ?? '', done: data.done, dueAt: data.due_at, createdAt: data.created_at, updatedAt: data.updated_at };
+    description: data.description ?? '', done: data.done, priority: data.priority, dueAt: data.due_at, createdAt: data.created_at, updatedAt: data.updated_at };
 }
 
 // A single authorized transaction saves the task and all draft relationships.
-export async function saveTaskForm({ projectId, taskId = null, requestId, title, description, stageId, dueAt, labelIds = [], assigneeIds = [], checklist = [], expectedChecklist = null }) {
+export async function saveTaskForm({ projectId, taskId = null, requestId, title, description, stageId, dueAt, labelIds = [], assigneeIds = [], checklist = [], expectedChecklist = null, priority }) {
   if (!isUuid(projectId) || !isUuid(stageId) || (taskId && !isUuid(taskId)) || !isUuid(requestId)) throw new TaskNotFoundError();
   if (![...labelIds, ...assigneeIds].every(isUuid)) throw new Error('Invalid task relationships.');
   const { data, error } = await supabaseClient.rpc('save_task_form', {
     p_project_id: projectId, p_task_id: taskId, p_request_id: requestId,
-    p_values: { title: title.trim(), description: prepareDescription(description), stage_id: stageId, due_at: dueAt ?? null,
+    p_values: { title: title.trim(), description: prepareDescription(description), stage_id: stageId, ...(priority === undefined ? (taskId ? {} : { priority: 'medium' }) : { priority: requirePriority(priority) }), due_at: dueAt ?? null,
       label_ids: [...new Set(labelIds)].sort(), assignee_ids: [...new Set(assigneeIds)].sort(), checklist },
     p_expected_checklist: expectedChecklist,
   });
@@ -132,7 +135,7 @@ export async function saveTaskForm({ projectId, taskId = null, requestId, title,
     throw new Error('Task saving is unavailable because a required database update is missing. Your draft is preserved. Ask the application administrator to complete the update, then retry.');
   }
   if (error?.code === 'P0002') throw new TaskNotFoundError();
-  if (error?.code === '40001') throw new Error(error.message);
+  if (error?.code === '40001' || error?.code === '22023') throw new Error(error.message);
   if (error?.code === '23514' || error?.code === '23503') throw new Error('A selected label, participant or checklist item is no longer valid. Review the draft and try again.');
   if (error || !data) throw new Error('Could not save the task. Your draft is preserved; retry without closing this window.');
   return data;

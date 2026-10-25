@@ -6,7 +6,7 @@ export async function listProjectTasks({status='all',projectId,page=1,signal}={}
   if (!isUuid(projectId)) throw new Error('Invalid project filter.');
   const offset=(Math.max(1,Math.floor(page)||1)-1)*TASK_LIST_PAGE_SIZE;
   // Exact count and filters cover the entire RLS-visible dataset before range pagination.
-  let query=supabaseClient.from('tasks').select('id,title,done,project_id,projects(title),project_stages(name)',{count:'exact'})
+  let query=supabaseClient.from('tasks').select('id,title,done,priority,project_id,projects(title),project_stages(name)',{count:'exact'})
     .order('created_at',{ascending:false}).order('id');
   if (status!=='all') query=query.eq('done',status==='done');
   if (projectId) query=query.eq('project_id',projectId);

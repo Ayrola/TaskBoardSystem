@@ -1,3 +1,4 @@
+import { renderPriority } from '../task-priority/task-priority.js';
 import html from './task-card.html?raw';
 import './task-card.css';
 import {htmlToExcerpt,setText} from '../../utils/render.js';
@@ -17,6 +18,7 @@ export function renderCardDeadline(element,task) {
 export function createTaskCard(task) {
  const card=template.content.firstElementChild.cloneNode(true);card.dataset.taskId=task.id;
  setText(card,'[data-task-title]',task.title);
+ renderPriority(card.querySelector('[data-task-priority]'),task.priority);
  const labels=card.querySelector('[data-task-labels]'),items=task.labels??[];
  labels.setAttribute('role','group');labels.append(...items.slice(0,2).map(label=>{const chip=labelBadge(label);chip.classList.remove('text-wrap','text-break','rounded-pill');return chip;}));labels.hidden=!items.length;
  if(items.length>2){const overflow=document.createElement('span');overflow.className='task-label-overflow';overflow.setAttribute('role','img');overflow.textContent=`+${items.length-2}`;overflow.title=items.slice(2).map(label=>label.name).join(', ');overflow.setAttribute('aria-label',`${items.length-2} more labels: ${overflow.title}`);labels.append(overflow);}

@@ -1,3 +1,4 @@
+import { renderPriority } from '../../components/task-priority/task-priority.js';
 import { renderTaskDeadline } from '../../utils/deadlines.js';
 import html from './admin-task.html?raw';
 import { renderFragment, setText } from '../../utils/render.js';
@@ -43,7 +44,7 @@ export function mount(container, ctx) {
       mode: 'edit',
       projectId: task.projectId,
       stages: stages.map((stage) => ({ id: stage.id, name: stage.name })),
-      task: { id: task.id, title: task.title, description: task.description, stageId: task.stageId, dueAt: task.dueAt },
+      task: { id: task.id, title: task.title, description: task.description, stageId: task.stageId, priority: task.priority, dueAt: task.dueAt },
       onSubmit: async (values) => {
         try {
           await saveTaskForm({projectId:task.projectId,taskId:task.id,...values});
@@ -90,6 +91,7 @@ export function mount(container, ctx) {
       const status = setText(root, '[data-field="status"]', task.done ? 'Done' : 'Open');
       status.classList.add(task.done ? 'text-bg-success' : 'text-bg-secondary');
       renderTaskDeadline(root.querySelector('[data-deadline]'), task);
+      renderPriority(root.querySelector('[data-admin-priority]'), task.priority);
       setText(root, '[data-field="position"]', task.position + 1);
       setText(root, '[data-field="created"]', formatDateTime(task.createdAt));
       setText(root, '[data-field="updated"]', formatDateTime(task.updatedAt));
