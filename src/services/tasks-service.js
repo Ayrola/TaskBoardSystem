@@ -107,9 +107,9 @@ export async function moveTask({ taskId, stageId, afterTaskId = null, toEnd = fa
 }
 
 // Used by links from paginated label results, including tasks outside the board's loaded pages.
-export async function getTask(taskId, { signal } = {}) {
-  if (!isUuid(taskId)) throw new TaskNotFoundError();
-  let query = supabaseClient.from('tasks').select('id, project_id, stage_id, title, description, done, due_at, created_at, updated_at').eq('id', taskId).maybeSingle();
+export async function getTask(taskId, { projectId, signal } = {}) {
+  if (!isUuid(taskId) || !isUuid(projectId)) throw new TaskNotFoundError();
+  let query = supabaseClient.from('tasks').select('id, project_id, stage_id, title, description, done, due_at, created_at, updated_at').eq('id', taskId).eq('project_id', projectId).maybeSingle();
   if (signal) query = query.abortSignal(signal);
   const { data, error } = await query;
   if (error) throw new Error('Could not load the task.');

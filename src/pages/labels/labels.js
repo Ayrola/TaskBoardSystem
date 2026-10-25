@@ -1,6 +1,5 @@
 import html from './labels.html?raw';
 import { renderFragment } from '../../utils/render.js';
-import { getProject, listProjects, PROJECTS_PAGE_SIZE } from '../../services/projects-service.js';
 import { listProjectLabels, saveProjectLabel, removeProjectLabel, listLabelTasks, LABEL_TASKS_PAGE_SIZE } from '../../services/labels-service.js';
 import { labelBadge } from '../../utils/labels.js';
 import { pageFromQuery, renderPager, totalPages } from '../../utils/pager.js';
@@ -39,7 +38,7 @@ export function mount(container, ctx) {
     status.textContent = '';
   }
   function labelUrl(projectId, labelId) {
-    return `/labels?project=${encodeURIComponent(projectId)}${labelId ? `&label=${encodeURIComponent(labelId)}` : ''}`;
+    return `/projects/${projectId}/labels${labelId ? `?label=${encodeURIComponent(labelId)}` : ''}`;
   }
   function editor(project, label = null) {
     const form = document.createElement('form');
@@ -51,14 +50,14 @@ export function mount(container, ctx) {
     nameLabel.htmlFor = nameId;
     const name = document.createElement('input');
     name.id = nameId; name.className = 'form-control'; name.required = true; name.maxLength = 60;
-    name.value = label?.name ?? '';
+    name.defaultValue = label?.name ?? ''; name.value = name.defaultValue;
     nameGroup.append(nameLabel, name);
     const colourGroup = node('div', '');
     const colourLabel = node('label', 'Colour', 'form-label');
     colourLabel.htmlFor = colourId;
     const colour = document.createElement('input');
     colour.type = 'color'; colour.id = colourId; colour.className = 'form-control form-control-color';
-    colour.value = label?.colour ?? '#2563eb';
+    colour.defaultValue = label?.colour ?? '#2563eb'; colour.value = colour.defaultValue;
     colourGroup.append(colourLabel, colour);
     const save = node('button', label ? 'Save label' : 'Create label', 'btn btn-primary');
     save.type = 'submit';
@@ -81,25 +80,10 @@ export function mount(container, ctx) {
     content.setAttribute('aria-busy', 'true');
     content.replaceChildren(); pager.hidden = true;
     try {
-      if (!ctx.query.project) {
-        const projects = await listProjects({ page, signal: ctx.signal });
-        if (ctx.signal.aborted || current !== generation) return;
-        content.append(node('h2', 'Accessible projects', 'h5'));
-        const list = node('ul', '', 'list-group');
-        for (const project of projects.rows) {
-          const li = node('li', '', 'list-group-item');
-          li.append(link(project.title, labelUrl(project.id)));
-          list.append(li);
-        }
-        content.append(list);
-        status.textContent = projects.rows.length ? '' : 'No accessible projects.';
-        renderPager(pager, { page, total: projects.total, pageSize: PROJECTS_PAGE_SIZE });
-        return;
-      }
-      const project = await getProject(ctx.query.project, { signal: ctx.signal });
+      const project = ctx.project;
       const labels = await listProjectLabels(project.id, { signal: ctx.signal });
       if (ctx.signal.aborted || current !== generation) return;
-      content.append(link('All accessible projects', '/labels'), node('h2', project.title, 'h4 mt-3'));
+      content.append(node('h2', project.title, 'h4 mt-3'));
       content.append(link('Open project board', `/projects/${project.id}/tasks`));
       if (project.canManage) content.append(editor(project));
       const list = node('ul', '', 'list-group my-3');
@@ -108,7 +92,7 @@ export function mount(container, ctx) {
         const select = link('', labelUrl(project.id, label.id));
         select.setAttribute('aria-label', `Show tasks labelled ${label.name}`);
         if (ctx.query.label === label.id) select.setAttribute('aria-current', 'true');
-        select.append(labelBadge(label)); li.append(select);
+        select.append(labelBadge(label)); li.append(select, node('span', ` · ${Number(label.task_labels?.[0]?.count ?? 0)} tasks`, 'small text-body-secondary'));
         if (project.canManage) {
           const details = document.createElement('details');
           details.className = 'mt-2';
@@ -134,7 +118,7 @@ export function mount(container, ctx) {
       if (!ctx.query.label) return;
       const selected = labels.find((label) => label.id === ctx.query.label);
       if (!selected) { status.textContent = 'Label not found or no longer accessible.'; return; }
-      const result = await listLabelTasks(selected.id, { page, signal: ctx.signal });
+      const result = await listLabelTasks(selected.id, { projectId: project.id, page, signal: ctx.signal });
       if (ctx.signal.aborted || current !== generation) return;
       content.append(node('h2', `Tasks labelled “${selected.name}”`, 'h5 mt-4'));
       if (page > totalPages(result.total, LABEL_TASKS_PAGE_SIZE)) {
@@ -155,5 +139,8 @@ export function mount(container, ctx) {
     } catch (error) { if (current === generation) fail(error); }
     finally { if (current === generation) content.setAttribute('aria-busy', 'false'); }
   }
+  ctx.onProjectRefresh(() => { if (!busy && !dialog && !dirty()) load(); });
+  const dirty = () => [...content.querySelectorAll('input')].some(input => input.value !== input.defaultValue);
+  ctx.setLeaveGuard(() => !dirty() || window.confirm('Discard unsaved label changes?'));
   load();
 }

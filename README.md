@@ -235,7 +235,7 @@ Run `npm run test:assignees` for isolated PostgreSQL checks of the migration, pa
 
 ### Project labels
 
-`/labels` lists accessible projects, their labels, and matching tasks (20 per page).
+`/projects/:id/labels` lists that project’s labels, usage counts and matching tasks (20 per page).
 Owners and admins create, rename, recolour and remove project labels. Owners, current
 members and admins can add/remove labels in task details. Cards display label names;
 black or white text is selected using WCAG relative luminance for at least 4.5:1 contrast.
@@ -261,12 +261,11 @@ rejected; ambiguous times during the autumn clock change use the first occurrenc
 An unchanged deadline preserves the original seconds and offset, including the
 second occurrence of a repeated local time.
 
-`/deadlines` shows only accessible **open** tasks, filtered and paginated in the
+`/projects/:id/deadlines` shows only that project’s accessible **open** tasks, filtered and paginated in the
 database (20 per page, ordered by deadline then ID). Overdue means before the server's
 current instant. Today spans midnight to the next midnight in the selected IANA
 display timezone, including any overdue tasks today. Upcoming starts at the next
-midnight. Day boundaries account for DST, including 23/25-hour days. The optional
-project selector contains only accessible projects. Applying filters resets pagination.
+midnight. Day boundaries account for DST, including 23/25-hour days. Project scope comes from the URL, with no in-page project selector. Applying filters resets pagination.
 The selected display timezone is remembered locally and also used for task deadline
 displays; the default is the browser timezone. Completed tasks retain their deadlines
 but are never marked as overdue work. The overview refreshes every minute; board
@@ -307,7 +306,7 @@ or exercise browser interactions.
 
 ### Task activity log
 
-`/activity` shows accessible task activity newest first, with project/task filters
+`/projects/:id/activity` shows that project’s accessible task activity newest first, with an optional task filter
 and server-side pages of 20 entries. Board and task-detail links open the relevant
 history. Page links retain a server-generated ID boundary so newly appended events
 do not shift older pages; Refresh returns to the latest first page. Timestamps use
@@ -370,7 +369,7 @@ project descriptions, exact project/stage totals, and a primary Add task action.
 Secondary project actions live in a disclosure menu; manager actions retain the
 existing permission hints. Cards show a safe plain-text excerpt and only available
 labels, assignees, deadlines, checklist progress, attachment counts and comment counts.
-Card action menus support keyboard navigation; dragging starts only from the grip.
+Card action menus support keyboard navigation; handle-based dragging excludes interactive controls.
 Task dialogs group the description/checklist/discussion separately from properties.
 Mobile layouts include expandable filter controls and a stage-jump selector.
 
@@ -396,7 +395,7 @@ Optional `BOARD_APP_URL` and `BOARD_CDP_URL` must be loopback URLs. The browser 
 creates/closes its own tab and replaces Supabase HTTP/Realtime traffic with synthetic
 fixtures; it does not mutate real accounts or database rows. It exercises desktop
 and mobile layouts, partial loading, full-project search, CRUD and failure recovery,
-filter retention, native dragging, keyboard moves, reload persistence, Realtime,
+filter retention, handle-based dragging, keyboard moves, reload persistence, Realtime,
 permission hints, empty/error states, access loss and safe long text. Screenshots
 are saved to the temporary directory printed by the test. These checks do not prove
 live Supabase authorization or live network behaviour, and were run in Chrome only.
@@ -405,7 +404,7 @@ live Supabase authorization or live network behaviour, and were run in Chrome on
 
 Private and admin routes share a persistent sidebar; public landing and login pages keep the public layout. The sidebar drains every page of the existing RLS-backed project listing before searching, so matches include owned and assigned projects beyond the first page. Management links use the API's `canManage` hint; database authorization remains unchanged.
 
-Project and membership mutations invalidate the in-memory directory. Existing board access broadcasts also invalidate it. External changes are rechecked on focus/visibility when stale and every minute while visible; no additional database publication is required. Logout and account changes abort pending requests and clear directory data. Only the collapsed navigation preference is stored locally.
+Project and membership mutations invalidate the in-memory directory. Existing board access broadcasts also invalidate it. External changes are rechecked on focus/visibility when stale and every minute while visible; no additional database publication is required. Logout and account changes abort pending requests and clear directory data. Only harmless display preferences and a per-user last-project ID are stored locally; every project entry rechecks access.
 
 On desktop, collapse creates an icon rail. On mobile, Bootstrap Offcanvas supplies the backdrop, Escape handling and focus trap; closing restores focus to the navigation opener. The board keeps its own horizontal scrolling area.
 
@@ -418,3 +417,51 @@ Choose **Light**, **Dark** or **System** in the sidebar account area (an icon st
 `public/theme.js` is the single theme service and a blocking head script, so it sets Bootstrap 5.3's root `data-bs-theme` and native `color-scheme` before rendering. The application uses its subscription API through `src/services/theme-service.js`. Semantic palettes live in `src/styles.css`; board tokens reference them. Quill Snow toolbar/link-editor colours and Sortable drag states use these tokens. Label foregrounds continue to be selected by their existing contrast calculation. No data, permissions or theme-resolved OS values are stored as preferences.
 
 Checks: `npm run test:theme` covers preferences, storage errors, media/storage events, subscription cleanup and semantic palette AA text contrast. With local Chrome DevTools available, `BOARD_APP_URL=http://127.0.0.1:4173 npm run test:theme:browser` checks the production preview, including real cross-tab updates and desktop/mobile screenshots. `BOARD_DARK=1` or `BOARD_LIGHT=1` with `npm run test:board:browser` exercises the board in each system theme. Browser suites use synthetic Supabase data; they do not prove live backend behavior or constitute a full accessibility audit.
+
+### Projects browser
+
+The Projects page uses a responsive card grid with literal title/description search, name/creation/metadata-update sorting, Owned/Member filters, accurate task/stage counts and task-completion progress. Project `updated_at` describes project metadata changes, not the most recent task activity. Missing descriptions remain empty; task-free projects display neutral progress.
+
+`browse_projects_page` (migration `20261023142454_project_browser.sql`) applies filters and ordering before the existing 20-project page window. The single response includes filtered and accessible totals and complete per-project task/stage aggregates. It is SECURITY INVOKER, authenticated-only, and preserves the existing RLS and management helpers. The existing `list_projects_page` RPC remains unchanged for the sidebar and older clients. Apply the new migration before deploying this frontend to another backend.
+
+Search, sort, access filter and pagination are encoded in the URL. A small in-memory, account-scoped UI preference also restores the list when using a board's Back to Projects link; project data and permissions are always fetched again. Existing create/edit/delete services invalidate the list; deletion retains its confirmation dialog.
+
+Verification: `npm run test:projects` runs isolated Postgres tests for search across pages, literal wildcards, deterministic sorts, counts, pagination and owner/member/admin/anonymous access. `BOARD_APP_URL=http://127.0.0.1:4173 npm run test:projects:browser` checks the production preview with synthetic projects, including CRUD/cancel, permissions, keyboard menus, history/back navigation and responsive light/dark screenshots. These browser fixtures do not perform live project mutations.
+
+### Dashboard summary navigation
+
+Project dashboard summaries use native links. Stages opens `/projects/:id/tasks`; Total/Open/Done tasks open `/projects/:id/task-list` with the corresponding status. Counts use exact server-side RLS-protected queries scoped to the URL project. Zero counts remain navigable; summaries are hidden during loading/errors. Modified clicks keep normal browser behaviour.
+
+The reusable project task list supports All/Open/Done with deterministic 20-row server pagination and exact totals. Clear Filters stays within the project. Task links open the existing board popup. No cross-project task selector or aggregation is used by these pages.
+
+`BOARD_APP_URL=http://127.0.0.1:4173 npm run test:dashboard:browser` uses the production preview and synthetic Supabase responses to verify destinations, filtered totals, pagination, project scope, clear/reload, task opening, Back/Forward, native-link keyboard/modified-click behavior, zero/loading/error/retry states and light/dark/mobile screenshots. These checks do not validate live backend data.
+
+
+### Task card display and interaction
+
+The shared `task-card` component renders safe plain-text previews, two label chips plus overflow, compact deadline/status chips, batched attachment/comment/checklist counts and two assignee initials plus overflow. It omits empty metadata and does not invent task references or priorities. Full deadline timestamps and overflow names are available through native titles and accessible names. No Bootstrap tooltip instances or per-card API requests are created.
+
+Choose Comfortable/Compact density and Show descriptions in the board toolbar's expanded controls. These harmless display preferences are stored under `taskboard:board-display`, follow cross-tab updates, and degrade to current-page settings if storage is unavailable. Hiding previews does not affect full-description search. The app had no existing density/preview preference mechanism in this checkout.
+
+Dragging starts from the card background, title, description and non-interactive metadata. Interactive controls are excluded; no dedicated grip is required. Main content clicks still open details; a keyboard opener shows the card focus ring, and Move task remains in the action menu. Sortable retains its single fallback path, 4px tolerance, 160ms touch hold, control exclusions, release-click suppression, filtered-board locking, partial-column relative placement, authoritative failure recovery and Realtime queuing. No card-wide touch-action or selection restrictions are applied.
+
+Run `BOARD_APP_URL=http://127.0.0.1:4173 BOARD_CHECK_CARDS=1 npm run test:board:browser` for card screenshots/overflow/preferences checks, and the normal board browser suite for whole-card reordering, cross-column moves, touch scrolling/dragging, controls, persistence and failure recovery. Both use synthetic backend responses.
+
+
+### Active project context
+
+The project ID in the URL is authoritative. Project sections are `/projects/:id/dashboard`, `/projects/:id/tasks` (the board), `/projects/:id/labels`, `/projects/:id/deadlines` and `/projects/:id/activity`. The paginated dashboard drill-down uses `/projects/:id/task-list`. Existing `/projects/:id/users` and `/projects/:id/edit` remain available to managers. Projects and administration remain global. There is no account-settings route in the existing application, so navigation adds no placeholder settings link.
+
+`project-context.js` loads the project through the existing RLS-backed service and supplies its name and effective permission hints in `ctx.project`. The router clears the old page, aborts its requests and checks access before mounting the next project page. A new navigation supersedes pending context and page requests; no project-record cache is shared across users or projects. Page requests use the lifecycle abort signal, and the board retains its own ordering, pagination, dialog and drag safeguards.
+
+After login, the `/dashboard` compatibility entry resolves the signed-in user’s last accessible project, then an accessible fallback. The only stored project preference is `taskboard:last-project:<userId>`. It is revalidated against the backend and never authorizes reads. Explicit project deep links take precedence. Zero-project users reach the Projects empty state with Create Project and invitation guidance. An explicit missing/deleted/inaccessible project shows an unavailable state with Retry and an accessible-project destination.
+
+The sidebar separates Projects/admin links from the verified current project’s Dashboard, Board, Labels, Deadlines and Activity. Members/Project Settings are shown according to backend-derived management hints. Switching projects preserves the section when permitted, otherwise opens the board; it intentionally drops filters, selection and pagination. Task/label/project drafts use navigation guards. Back/Forward and reload obtain context from their own URLs.
+
+Project data is filtered server-side: task lists and board pages include project equality filters, deadlines/activity pass the project ID to existing RPCs, and labels/usage counts query only the project catalogue. Label task pagination first verifies the selected label belongs to that project; the existing label RPC then follows that label’s unique project relation. Existing FK constraints prevent cross-project label assignments. No schema, RLS or RPC changes are needed.
+
+Non-board project pages own one private project Broadcast subscription and revalidate access before refreshing. The board retains its existing single subscription and refresh deferral while dragging/editing. Old subscriptions and request controllers are released on navigation/logout/account change. Access checks also run after project-directory mutations, on focus and every minute while visible. Revocation clears the page and current-project navigation; transient verification failures offer Retry. Snapshot activity pagination and deadline display-timezone/DST conventions are preserved.
+
+Legacy `/dashboard`, `/tasks`, `/labels`, `/deadlines` and `/activity` entries resolve to the corresponding project URL using replace navigation. Compatible query parameters survive; selections/snapshots/pages associated with an unavailable requested project are discarded. They are compatibility entry points, not duplicate global navigation items.
+
+Verification: `npm run test:context` checks section preservation, management fallback, legacy filter cleanup, per-user preference isolation, blocked storage and aborted access checks. `BOARD_APP_URL=http://127.0.0.1:4173 npm run test:context:browser` uses two visibly different synthetic projects to check page/query isolation, last-project fallback, deep links, history/reload, rapid switching, delayed responses, Realtime isolation, revoked access, empty projects and mobile themes. Existing SQL/RLS tests remain separate from these mocked browser checks; they run locally in PGlite, not against production.

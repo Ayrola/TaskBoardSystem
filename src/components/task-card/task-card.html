@@ -1,0 +1,23 @@
+<li class="task-card">
+ <div class="task-card-top">
+  <div class="task-card-labels" data-task-labels aria-label="Task labels" hidden></div>
+  <div class="task-card-tools"><button type="button" class="board-icon-button" data-task-menu-trigger aria-label="Task actions"><i class="bi bi-three-dots" aria-hidden="true"></i></button></div>
+ </div>
+ <div class="task-card-content"><h3><span class="task-open" data-task-title></span></h3><button type="button" class="task-keyboard-open visually-hidden" data-open-task>Open task details</button><p class="task-excerpt" data-task-excerpt hidden></p></div>
+ <div class="task-card-meta" data-card-meta hidden>
+  <span class="task-completed-marker" data-card-done hidden><i class="bi bi-check2-circle" aria-hidden="true"></i> Completed</span>
+  <time class="task-deadline" data-deadline hidden></time>
+  <div class="task-card-indicators" data-indicators hidden>
+   <span class="task-meta-item" data-checklist-progress hidden><i class="bi bi-check2-square" aria-hidden="true"></i><span></span></span>
+   <span class="task-meta-item" data-attachment-progress hidden><i class="bi bi-paperclip" aria-hidden="true"></i><span></span></span>
+   <span class="task-meta-item" data-comment-progress hidden><i class="bi bi-chat-left" aria-hidden="true"></i><span></span></span>
+  </div>
+  <div class="task-assignees" data-task-assignees hidden></div>
+ </div>
+ <div class="board-action-menu" popover="auto" role="group" aria-label="Task actions" data-action-menu data-card-menu>
+  <button type="button" data-task-action="view"><i class="bi bi-arrow-up-right-square" aria-hidden="true"></i> Open task</button>
+  <button type="button" data-task-action="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit task</button>
+  <button type="button" data-task-action="move"><i class="bi bi-arrows-move" aria-hidden="true"></i> Move task</button>
+  <div class="board-menu-divider"></div><button type="button" class="board-danger-action" data-task-action="delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete task</button>
+ </div>
+</li>

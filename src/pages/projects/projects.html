@@ -1,63 +1,30 @@
 <section class="page-projects" aria-labelledby="projects-heading" aria-busy="true">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 id="projects-heading" class="h2 mb-0">Projects</h1>
-    <a class="btn btn-primary" href="/projects/add"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add project</a>
-  </div>
-
-  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
-    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-    <span>Loading your projects…</span>
-  </div>
-
-  <div data-state="error" class="alert alert-danger" role="alert" hidden>
-    <p class="mb-2" data-error-text>Could not load your projects.</p>
-    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
-  </div>
-
-  <div data-state="empty" class="card" hidden>
-    <div class="card-body text-center py-5">
-      <i class="bi bi-folder-plus display-5 text-body-secondary" aria-hidden="true"></i>
-      <h2 class="h5 mt-3">No projects yet</h2>
-      <p class="text-body-secondary mb-3">Create a project to get Not Started, In Progress and Done stages automatically.</p>
-      <a class="btn btn-primary" href="/projects/add">Add your first project</a>
-    </div>
-  </div>
-
-  <div data-state="table" class="table-responsive" hidden>
-    <table class="table table-hover align-middle projects-table">
-      <caption class="visually-hidden">Your projects with stage and task counts</caption>
-      <thead>
-        <tr>
-          <th scope="col">Title</th>
-          <th scope="col">Description</th>
-          <th scope="col" class="text-end">Stages</th>
-          <th scope="col" class="text-end">Open Tasks</th>
-          <th scope="col" class="text-end">Tasks Done</th>
-          <th scope="col">Actions</th>
-        </tr>
-      </thead>
-      <tbody data-rows></tbody>
-    </table>
-  </div>
-
-  <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2" aria-label="Projects pagination" data-pager hidden></nav>
-
-  <template data-row-template>
-    <tr>
-      <th scope="row" class="fw-semibold">
-        <span data-cell="title"></span>
-        <span class="badge ms-1 align-middle" data-cell="role"></span>
-      </th>
-      <td class="project-description" data-cell="description"></td>
-      <td class="text-end" data-cell="stageCount"></td>
-      <td class="text-end" data-cell="openTasks"></td>
-      <td class="text-end" data-cell="doneTasks"></td>
-      <td class="text-nowrap">
-        <a class="btn btn-sm btn-outline-primary" data-action="tasks">View Tasks</a>
-        <a class="btn btn-sm btn-outline-secondary" data-action="users">Users</a>
-        <a class="btn btn-sm btn-outline-secondary" data-action="edit">Edit</a>
-        <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button>
-      </td>
-    </tr>
+  <header class="projects-header">
+    <div><p class="projects-eyebrow">Your workspace</p><h1 id="projects-heading">Projects</h1><p class="projects-intro">A clear view of your work, from the first idea to the final task.</p><p class="projects-count" data-accessible-count aria-live="polite">Loading your projects…</p></div>
+    <a class="btn btn-primary" href="/projects/add"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create Project</a>
+  </header>
+  <form class="projects-toolbar" role="search" aria-label="Find projects">
+    <div class="projects-search"><label for="projects-search" class="visually-hidden">Search project titles and descriptions</label><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" id="projects-search" name="search" type="search" maxlength="200" placeholder="Search projects…" autocomplete="off"></div>
+    <div><label for="projects-role" class="visually-hidden">Project access</label><select id="projects-role" class="form-select" name="role"><option value="all">All projects</option><option value="owned">Owned by me</option><option value="member">Member of</option></select></div>
+    <div><label for="projects-sort" class="visually-hidden">Sort projects</label><select id="projects-sort" class="form-select" name="sort"><option value="created">Newest created</option><option value="updated">Recently updated</option><option value="name">Name A–Z</option></select></div>
+    <button type="button" class="btn btn-outline-secondary" data-clear-filters hidden>Clear Filters</button>
+    <span class="projects-results" data-result-count role="status"></span>
+  </form>
+  <div data-state="loading" role="status"><span class="visually-hidden">Loading projects…</span><div class="project-grid" aria-hidden="true"><div class="project-skeleton"></div><div class="project-skeleton"></div><div class="project-skeleton"></div><div class="project-skeleton"></div><div class="project-skeleton"></div><div class="project-skeleton"></div></div></div>
+  <div data-state="error" class="projects-empty" role="alert" hidden><i class="bi bi-exclamation-circle" aria-hidden="true"></i><h2>Projects could not be loaded</h2><p data-error-text></p><button type="button" class="btn btn-outline-primary" data-retry>Retry</button></div>
+  <div data-state="empty" class="projects-empty" hidden><i class="bi bi-folder-plus" aria-hidden="true"></i><h2>A place for your next idea</h2><p>Create your first project, or ask a project owner to invite you.</p><a class="btn btn-primary" href="/projects/add">Create Project</a></div>
+  <div data-state="no-results" class="projects-empty" hidden><i class="bi bi-search" aria-hidden="true"></i><h2>No matching projects</h2><p>Try another search or clear your filters to see all accessible projects.</p><button type="button" class="btn btn-outline-primary" data-clear-filters>Clear Filters</button></div>
+  <div data-state="grid" class="project-grid" data-rows hidden></div>
+  <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4" aria-label="Projects pagination" data-pager hidden></nav>
+  <template data-card-template>
+    <article class="project-card">
+      <div class="project-card-top"><span class="project-avatar" aria-hidden="true" data-initials></span><span class="project-access" data-role></span><div class="dropdown ms-auto" data-menu><button type="button" class="project-menu-button" data-bs-toggle="dropdown" aria-expanded="false" data-menu-trigger><i class="bi bi-three-dots" aria-hidden="true"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" data-action="edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a></li><li><a class="dropdown-item" data-action="users"><i class="bi bi-people" aria-hidden="true"></i> Members</a></li><li><hr class="dropdown-divider"></li><li><button type="button" class="dropdown-item text-danger" data-action="delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete</button></li></ul></div></div>
+      <h2 class="project-card-title"><a data-title-link></a></h2>
+      <p class="project-card-description" data-description></p>
+      <div class="project-task-summary"><strong data-task-total></strong><span data-task-counts></span></div>
+      <progress class="project-progress" max="100" value="0" data-progress></progress>
+      <div class="project-card-meta"><span><i class="bi bi-columns-gap" aria-hidden="true"></i> <span data-stages></span></span><span data-updated title="Last project metadata update"></span></div>
+      <div class="project-card-footer"><a data-action="tasks">Open Board <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+    </article>
   </template>
 </section>

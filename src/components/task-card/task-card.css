@@ -1,0 +1,43 @@
+/* Only actual board task cards use these styles. */
+.page-tasks .task-card { cursor:grab; position:relative; padding:12px; margin-bottom:10px; min-width:0; border:1px solid var(--tb-line); border-radius:12px; background:var(--tb-surface); box-shadow:var(--tb-shadow); color:var(--tb-ink); transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease; }
+.page-tasks .task-card:hover { border-color:var(--app-muted); box-shadow:var(--app-shadow-raised); transform:translateY(-2px); }
+.page-tasks .task-card:has([data-open-task]:focus-visible) { outline:3px solid var(--app-focus); outline-offset:2px; }
+.page-tasks .task-card-top { display:flex; align-items:flex-start; gap:6px; min-height:28px; margin-bottom:6px; }
+.page-tasks .task-card-labels { display:flex; flex:1; min-width:0; flex-wrap:wrap; align-items:center; gap:4px; padding-top:3px; }
+.page-tasks .task-card .project-label { font-size:.64rem; font-weight:550; line-height:1.4; max-width:112px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:5px; padding:2px 6px; }
+.page-tasks .task-label-overflow { font-size:.65rem; color:var(--tb-muted); padding:2px 4px; white-space:nowrap; }
+.page-tasks .task-card-tools { margin-left:auto; display:flex; gap:1px; align-items:center; flex:none; }
+.page-tasks .task-card-tools .board-icon-button { width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:5px; flex:none; color:var(--tb-muted); }
+.page-tasks .task-card-tools .board-icon-button:hover { background:var(--app-hover); color:var(--tb-ink); }
+.page-tasks .task-card :is(button,a,input,select,textarea,label,[contenteditable="true"],[role="button"]) { cursor:auto; }
+.page-tasks .task-card button,.page-tasks .task-card a { cursor:pointer; }
+.page-tasks .task-card h3 { margin:0; font-size:.87rem; font-weight:650; line-height:1.5; letter-spacing:-.01em; }
+.page-tasks .task-open { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:break-word; word-break:normal; }
+.page-tasks .task-excerpt { margin:7px 0 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:break-word; color:var(--tb-muted); font-size:.76rem; line-height:1.55; }
+.page-tasks[data-descriptions="hide"] .task-excerpt { display:none; }
+.page-tasks .task-card-meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid var(--app-divider); font-size:.68rem; color:var(--tb-muted); }
+.page-tasks .task-deadline { display:inline-flex; align-items:center; border:1px solid var(--tb-line); border-radius:5px; padding:2px 5px; font-size:.65rem; white-space:nowrap; font-weight:500; }
+.page-tasks .task-deadline.is-overdue { background:var(--app-selected); border-color:var(--app-danger); }
+.page-tasks .task-completed-marker { display:inline-flex; align-items:center; gap:4px; font-size:.64rem; color:var(--app-success); }
+.page-tasks .task-card-indicators { display:flex; flex-wrap:wrap; align-items:center; gap:9px; }
+.page-tasks .task-meta-item { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.page-tasks .task-assignees { margin-left:auto; display:flex; align-items:center; padding-left:3px; }
+.page-tasks .task-avatar { display:grid; place-items:center; height:24px; min-width:24px; padding:0 3px; margin-left:-3px; border:2px solid var(--tb-surface); border-radius:50%; background:var(--app-hover); color:var(--app-secondary); font-size:.55rem; font-weight:650; line-height:1; }
+.page-tasks .task-avatar-overflow { background:var(--app-selected); color:var(--app-link); }
+.page-tasks[data-density="compact"] .task-card { padding:9px 10px; margin-bottom:7px; }
+.page-tasks[data-density="compact"] .task-card-top { margin-bottom:3px; }
+.page-tasks[data-density="compact"] .task-card h3 { font-size:.82rem; }
+.page-tasks[data-density="compact"] .task-card-meta { margin-top:8px; padding-top:7px; gap:6px; }
+.page-tasks[data-density="compact"] .task-excerpt { margin-top:5px; font-size:.72rem; }
+.page-tasks .board.is-dragging .task-card:hover { transform:none; }
+.page-tasks .board-description-preference { gap:8px; }
+@media(max-width:767.98px) { .page-tasks .task-card-tools .board-icon-button { height:44px; width:44px; opacity:1; }.page-tasks .task-card-top { min-height:44px; }.page-tasks .task-card h3 { font-size:.86rem; } }
+@media(prefers-reduced-motion:reduce) { .page-tasks .task-card { transition:none; }.page-tasks .task-card:hover { transform:none; } }
+
+.page-tasks.is-filtered .task-card { cursor:default; }
+.page-tasks .board.is-dragging .task-card { cursor:grabbing; }
+@media(max-width:767.98px) { .page-tasks .task-card-tools .board-icon-button { width:44px; height:44px; }.page-tasks .task-card-top { min-height:44px; }.page-tasks .task-card h3 { font-size:.86rem; } }
+
+/* Sortable owns the preview transform: never ease or decorate pointer movement. */
+.page-tasks .task-card.task-drag-preview { transition:none; cursor:grabbing; }
+.page-tasks .task-card.task-chosen:hover { transform:none; }

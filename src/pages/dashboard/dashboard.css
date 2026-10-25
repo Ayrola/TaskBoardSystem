@@ -1,7 +1,1 @@
-.page-dashboard {
-  min-height: 12rem;
-}
-
-.page-dashboard [data-stat] {
-  font-variant-numeric: tabular-nums;
-}
+.page-dashboard { min-height:12rem; }

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { projectDestination, projectSection, legacyProjectQuery } from '../src/utils/project-navigation.js';
+const member={id:'member-project',canManage:false},owner={id:'owned-project',canManage:true};
+for(const section of ['dashboard','tasks','labels','deadlines','activity','task-list'])assert.equal(projectDestination(member,`/projects/old/${section}`),`/projects/member-project/${section}`);
+assert.equal(projectDestination(member,'/projects/old/edit'),'/projects/member-project/tasks');
+assert.equal(projectDestination(owner,'/projects/old/edit'),'/projects/owned-project/edit');
+assert.equal(projectSection('/admin/users/123'),'tasks');
+assert.equal(projectDestination(member,'/projects'),'/projects/member-project/tasks');
+assert.equal(legacyProjectQuery('labels',new URLSearchParams('project=other&label=foreign&page=9'),false),'');
+assert.equal(legacyProjectQuery('activity',new URLSearchParams('task=foreign&snapshot=20&page=4'),false),'');
+assert.equal(legacyProjectQuery('deadlines',new URLSearchParams('project=foreign&bucket=today&timezone=UTC&page=4'),false),'?bucket=today&timezone=UTC');
+assert.equal(legacyProjectQuery('task-list',new URLSearchParams('status=done&project=other'),true),'?status=done');
+console.log('PASS: project section preservation, permission fallback, legacy query compatibility and foreign selection reset.');

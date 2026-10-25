@@ -25,7 +25,7 @@ export async function getProject(id, { signal } = {}) {
   if (!isUuid(id)) throw new ProjectNotFoundError();
 
   const { data, error } = await withSignal(
-    supabaseClient.from('projects').    select('id, title, description, owner_id').eq('id', id).maybeSingle(),
+    supabaseClient.from('projects').select('id, title, description, owner_id').eq('id', id).maybeSingle(),
     signal,
   );
   if (error) throw new Error('Could not load this project.');
@@ -125,4 +125,20 @@ export async function listNavigationProjects({ signal } = {}) {
     if (!result.rows.length || page * PROJECTS_PAGE_SIZE >= result.total) break;
   }
   return [...projects.values()].sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+}
+
+// Reuses the existing per-project count aggregation, with filters/order before the page window.
+export async function browseProjects({ page = 1, search = '', sort = 'created', role = 'all', signal } = {}) {
+  const { data, error } = await withSignal(supabaseClient.rpc('browse_projects_page', {
+    p_limit: PROJECTS_PAGE_SIZE, p_offset: (Math.max(1, Math.floor(page) || 1) - 1) * PROJECTS_PAGE_SIZE,
+    p_search: String(search).trim().slice(0, 200),
+    p_sort: ['name', 'updated', 'created'].includes(sort) ? sort : 'created',
+    p_role: ['all', 'owned', 'member'].includes(role) ? role : 'all',
+  }), signal);
+  if (error) throw new Error('Could not load your projects. Please try again.');
+  return { total: Number(data?.total ?? 0), accessibleTotal: Number(data?.accessible_total ?? 0), rows: (data?.rows ?? []).map((row) => ({
+    id: row.id, title: row.title, description: row.description ?? '', createdAt: row.created_at, updatedAt: row.updated_at,
+    stageCount: Number(row.stage_count), openTasks: Number(row.open_tasks), doneTasks: Number(row.done_tasks),
+    isOwner: row.is_owner === true, isMember: row.is_member === true, canManage: row.can_manage === true,
+  })) };
 }

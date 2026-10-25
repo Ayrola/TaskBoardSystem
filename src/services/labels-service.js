@@ -7,7 +7,7 @@ export async function listProjectLabels(projectId, { signal } = {}) {
   const labels = [];
   // Read every catalogue page rather than silently truncating at the API row limit.
   for (let offset = 0; ; offset += 200) {
-    let query = supabaseClient.from('project_labels').select('id, project_id, name, colour')
+    let query = supabaseClient.from('project_labels').select('id, project_id, name, colour, task_labels(count)')
       .eq('project_id', projectId).order('name').order('id').range(offset, offset + 199);
     if (signal) query = query.abortSignal(signal);
     const { data, error } = await query;
@@ -53,8 +53,12 @@ export async function listTaskLabelIds(taskId, { signal } = {}) {
   return new Set(data.map((row) => row.label_id));
 }
 
-export async function listLabelTasks(labelId, { page = 1, signal } = {}) {
-  if (!isUuid(labelId)) throw new Error('Label not found.');
+export async function listLabelTasks(labelId, { projectId, page = 1, signal } = {}) {
+  if (!isUuid(labelId) || !isUuid(projectId)) throw new Error('Label not found.');
+  let labelQuery = supabaseClient.from('project_labels').select('id').eq('id', labelId).eq('project_id', projectId).maybeSingle();
+  if (signal) labelQuery = labelQuery.abortSignal(signal);
+  const { data: label, error: labelError } = await labelQuery;
+  if (labelError || !label) throw new Error('Label not found in this project.');
   let query = supabaseClient.rpc('label_tasks_page', {
     p_label_id: labelId, p_limit: LABEL_TASKS_PAGE_SIZE,
     p_offset: (Math.max(1, Math.floor(page) || 1) - 1) * LABEL_TASKS_PAGE_SIZE,

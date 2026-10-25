@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 export async function checkSidebarBrowser({ evaluate, send, wait, saveScreenshot, errors }) {
   const check = async (expression, message) => assert.equal(await evaluate(expression), true, message);
   await wait(`document.querySelectorAll('.sidebar-project').length===1`);
-  await check(`document.querySelector('.sidebar-project.active .sidebar-subnav').hidden===false`, 'Direct board URL expands active project');
+  await check(`document.querySelector('[data-current-project]').hidden===false`, 'Direct board URL shows active project navigation');
   await check(`document.querySelector('.sidebar-project.active a').getAttribute('aria-current')==='page'`, 'Active project link');
   await evaluate(`window.__sidebarIdentity=document.querySelector('.app-sidebar')`);
   await evaluate(`document.querySelector('.sidebar-collapse').click()`);
@@ -22,9 +22,9 @@ export async function checkSidebarBrowser({ evaluate, send, wait, saveScreenshot
   await check(`document.querySelector('.sidebar-projects').textContent.includes('No matching projects')`, 'Search empty state');
   await evaluate(`document.querySelector('#sidebar-search').value='';document.querySelector('#sidebar-search').dispatchEvent(new Event('input'));__boardMock.navigationProjects=[];import('/src/services/project-events.js').then(m=>m.notifyProjectsChanged())`);
   await wait(`document.querySelector('.sidebar-projects').textContent.includes('No projects yet')`);
-  await evaluate(`__boardMock.navigationProjects=[{id:__boardMock.id(10),title:'Renamed project',is_owner:false,can_manage:false}];import('/src/services/project-events.js').then(m=>m.notifyProjectsChanged())`);
+  await evaluate(`__boardMock.member=true;__boardMock.navigationProjects=[{id:__boardMock.id(10),title:'Renamed project',is_owner:false,can_manage:false}];import('/src/services/project-events.js').then(m=>m.notifyProjectsChanged())`);
   await wait(`document.querySelector('.sidebar-project-title')?.textContent==='Renamed project'`);
-  await check(`!document.querySelector('.sidebar-subnav a[href$="/users"]') && !document.querySelector('.sidebar-subnav a[href$="/edit"]')`, 'Member cannot see management links');
+  await check(`!document.querySelector('[data-project-navigation] a[href$="/users"]') && !document.querySelector('[data-project-navigation] a[href$="/edit"]')`, 'Member cannot see management links');
   await evaluate(`document.querySelector('.app-sidebar a[href="/projects"]').click()`);
   await wait(`location.pathname==='/projects' && document.querySelector('.page-projects')`);
   await check(`window.__sidebarIdentity===document.querySelector('.app-sidebar')`, 'Sidebar stays mounted');

@@ -2,6 +2,9 @@ import { routes, notFoundRoute } from './routes.js';
 import { createCleanup } from './utils/cleanup.js';
 import { initAuth, isAuthReady, getCurrentSession, onAuthChange } from './services/auth-service.js';
 
+import { legacyProjectQuery } from './utils/project-navigation.js';
+import { onProjectsChanged } from './services/project-events.js';
+
 const APP_NAME = 'Taskboard';
 
 const compiled = routes.map((route) => {
@@ -21,6 +24,7 @@ export function onRouteStart(listener) {
 }
 let outlet = null;
 let current = null;
+let pendingController = null;
 let renderToken = 0;
 let renderedKey = null;
 // Set by a page with unsaved work; returns true to allow leaving.
@@ -70,6 +74,8 @@ export function safeReturnTo(value) {
 
 function unmountCurrent() {
   leaveGuard = null;
+  pendingController?.abort();
+  pendingController = null;
   if (!current) return;
   current.controller.abort(); // cancels pending page requests that listen to ctx.signal
   current.cleanup.run();
@@ -107,7 +113,10 @@ async function render({ focus }) {
   const query = Object.fromEntries(url.searchParams);
 
   unmountCurrent();
+  const controller = new AbortController();
+  pendingController = controller;
   renderedKey = url.pathname + url.search;
+  showLoading();
 
   // Access is decided only after the stored session has been restored.
   if (!isAuthReady()) showLoading();
@@ -142,7 +151,30 @@ async function render({ focus }) {
     }
   }
 
-  startListeners.forEach((listener) => listener({ path: url.pathname, params, access: route.access }));
+  const announce = project => startListeners.forEach(listener => listener({ path: url.pathname, params: route.project ? params : {}, access: route.access, project }));
+  announce(null);
+  let project = null;
+  try {
+    const context = route.project || route.legacySection ? await import('./services/project-context.js') : null;
+    if (token !== renderToken) return;
+    if (route.legacySection) {
+      project = await context.resolveProjectEntry(session.user.id, { requestedId: query.project, signal: controller.signal });
+      if (token !== renderToken) return;
+      const suffix = legacyProjectQuery(route.legacySection, url.searchParams, query.project ? query.project === project?.id : true);
+      navigate(project ? `/projects/${project.id}/${route.legacySection}${suffix}` : '/projects', { replace: true });
+      return;
+    }
+    if (route.project) {
+      project = await context.loadProjectContext(params.id, { signal: controller.signal });
+      if (token !== renderToken) return;
+      context.rememberProject(session.user.id, project.id);
+      announce(project);
+    }
+  } catch (error) {
+    if (token !== renderToken || controller.signal.aborted) return;
+    showProjectError(error);
+    return;
+  }
 
   let page;
   try {
@@ -157,8 +189,11 @@ async function render({ focus }) {
   if (token !== renderToken) return; // a newer navigation superseded this one
 
   const cleanup = createCleanup();
-  const controller = new AbortController();
+  const refreshListeners = new Set();
   const ctx = {
+    project,
+    pageTitle: page.title,
+    onProjectRefresh(listener) { refreshListeners.add(listener); cleanup.add(() => refreshListeners.delete(listener)); },
     params,
     query,
     path: url.pathname,
@@ -176,17 +211,72 @@ async function render({ focus }) {
   try {
     cleanup.add(await page.mount(outlet, ctx));
   } catch (error) {
+    if (token !== renderToken) return;
     console.error(error);
     unmountCurrent();
     showError('Something went wrong while showing this page.');
+    return;
   }
   if (token !== renderToken) return;
 
+  if (project) {
+    const breadcrumb = document.createElement('nav'); breadcrumb.className = 'small text-body-secondary mb-3'; breadcrumb.setAttribute('aria-label', 'Project context');
+    const projectsLink = document.createElement('a'); projectsLink.href = '/projects'; projectsLink.textContent = 'Projects';
+    const name = document.createElement('span'); name.textContent = ` / ${project.title}`; breadcrumb.append(projectsLink, name); outlet.prepend(breadcrumb);
+    watchProject(ctx, refreshListeners, token, name);
+  }
   const title = typeof page.title === 'function' ? page.title(ctx) : page.title;
-  document.title = title ? `${title} · ${APP_NAME}` : APP_NAME;
+  document.title = title ? `${title}${project ? ` · ${project.title}` : ''} · ${APP_NAME}` : APP_NAME;
 
   if (focus) moveFocus();
   listeners.forEach((listener) => listener({ path: url.pathname, params, notFound: ctx.notFound }));
+}
+
+
+function showProjectError(error) {
+  document.title = `Project unavailable · ${APP_NAME}`;
+  showError(error?.name === 'ProjectNotFoundError' ? 'Project not found or no longer accessible.' : 'Could not verify project access. Please try again.');
+  const projects = document.createElement('a'); projects.href = '/projects'; projects.className = 'btn btn-primary me-2'; projects.textContent = 'Choose an accessible project';
+  const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'btn btn-outline-secondary'; retry.textContent = 'Retry'; retry.onclick = () => render({ focus: true });
+  const heading = document.createElement('h1'); heading.className = 'h2'; heading.textContent = 'Project unavailable';
+  outlet.prepend(heading);
+  outlet.append(projects, retry);
+  moveFocus();
+}
+async function watchProject(ctx, refreshListeners, token, name) {
+  const { loadProjectContext } = await import('./services/project-context.js');
+  if (ctx.signal.aborted || token !== renderToken) return;
+  let checking = false, dirty = false, timer;
+  const check = async () => {
+    if (checking) { dirty = true; return; }
+    if (ctx.signal.aborted || token !== renderToken) return;
+    checking = true;
+    try {
+      const project = await loadProjectContext(ctx.project.id, { signal: ctx.signal });
+      if (ctx.signal.aborted || token !== renderToken) return;
+      ctx.project = project; name.textContent = ` / ${project.title}`;
+      document.title = `${typeof ctx.pageTitle === 'function' ? ctx.pageTitle(ctx) : ctx.pageTitle ?? 'Project'} · ${project.title} · ${APP_NAME}`;
+      startListeners.forEach(listener => listener({ path: ctx.path, params: ctx.params, access: 'private', project }));
+      for (const refresh of refreshListeners) refresh();
+    } catch (error) {
+      if (ctx.signal.aborted || token !== renderToken) return;
+      unmountCurrent(); showProjectError(error);
+      startListeners.forEach(listener => listener({ path: ctx.path, params: ctx.params, access: 'private', project: null }));
+    } finally { checking = false; if (dirty && !ctx.signal.aborted) { dirty = false; schedule(); } }
+  };
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(check, 150); };
+  ctx.cleanup.add(() => clearTimeout(timer));
+  ctx.cleanup.add(onProjectsChanged(schedule));
+  ctx.cleanup.listen(window, 'focus', schedule);
+  const poll = setInterval(() => { if (!document.hidden) schedule(); }, 60000);
+  ctx.cleanup.add(() => clearInterval(poll));
+  // The board already owns its subscription and defers refreshes during drags and edits.
+  if (!ctx.path.endsWith('/tasks')) {
+    const { subscribeToBoard } = await import('./services/board-realtime.js');
+    if (ctx.signal.aborted || token !== renderToken) return;
+    const realtime = subscribeToBoard(ctx.project.id, { onNotify: schedule, onSubscribed: reconnect => { if (reconnect) schedule(); } });
+    ctx.cleanup.add(() => realtime.unsubscribe());
+  }
 }
 
 export function navigate(to, { replace = false } = {}) {

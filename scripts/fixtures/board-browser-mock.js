@@ -19,9 +19,36 @@
     const url=new URL(raw);const path=url.pathname.split('/').at(-1); const body=init.body?JSON.parse(init.body):{};const mock=window.__boardMock;
     mock.calls.push({path,body,url:url.search});
     const respond=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','Access-Control-Allow-Origin':'*'}});
+    if (window.__contextFetch) { const response = await window.__contextFetch({ url, path, body, init }); if (response) return response; }
     if(url.pathname.includes('/auth/')) return respond(path==='user'?user:{user});
+    if (init.method === 'HEAD' && ['tasks','project_stages'].includes(path)) {
+      if(mock.failDashboard)return respond({message:'Preview failure'},500);
+      if(mock.delayDashboard)await new Promise(r=>setTimeout(r,mock.delayDashboard));
+      const count=mock.zeroDashboard?0:path==='project_stages'?stages.length:tasks.filter(t=>t.project_id===url.searchParams.get('project_id')?.slice(3)&&(!url.searchParams.has('done')||t.done===(url.searchParams.get('done')==='eq.true'))).length;
+      return new Response(null,{status:200,headers:{'content-range':`0-0/${count}`}});
+    }
+    if(path==='get_dashboard_stats'){if(mock.failDashboard)return respond({message:'Preview failure'},500);if(mock.delayDashboard)await new Promise(r=>setTimeout(r,mock.delayDashboard));return respond({project_count:mock.zeroDashboard?0:1,total_tasks:mock.zeroDashboard?0:tasks.length,open_tasks:mock.zeroDashboard?0:tasks.filter(t=>!t.done).length,done_tasks:mock.zeroDashboard?0:tasks.filter(t=>t.done).length});}
+    if(path==='projects' && url.searchParams.get('select')==='id,title')return respond(mock.zeroDashboard?[]:[{id:id(10),title:'Product workspace'}]);
+    if(path==='tasks' && url.searchParams.get('select')?.includes('projects(title)')){
+      if(mock.failTaskList)return respond({message:'Preview failure'},500);
+      let list=mock.zeroDashboard?[]:tasks.filter(t=>(!url.searchParams.has('done')||t.done===(url.searchParams.get('done')==='eq.true'))&&(!url.searchParams.has('project_id')||t.project_id===url.searchParams.get('project_id').slice(3)));
+      const offset=Number(url.searchParams.get('offset')??0),limit=Number(url.searchParams.get('limit')??20),total=list.length;
+      return new Response(JSON.stringify(list.slice(offset,offset+limit).map(t=>({...t,projects:{title:'Product workspace'},project_stages:{name:stages.find(s=>s.id===t.stage_id).name}}))),{status:200,headers:{'content-type':'application/json','content-range':`${offset}-${Math.min(offset+limit,total)-1}/${total}`}});
+    }
     if(path==='is_admin')return respond(false);
+    if(path==='browse_projects_page'){
+      if(mock.failProjects)return respond({message:'Preview failure'},500);
+      const all=mock.projectBrowserProjects??[{id:id(10),title:'Product workspace',description:'A focused workspace',stage_count:4,open_tasks:60,done_tasks:1,is_owner:!mock.member,is_member:mock.member,can_manage:!mock.member,created_at:'2026-10-01T12:00:00Z',updated_at:'2026-10-23T12:00:00Z'}];
+      const needle=(body.p_search??'').toLowerCase();
+      const filtered=all.filter(p=>(p.title.toLowerCase().includes(needle)||(p.description??'').toLowerCase().includes(needle))&&(!body.p_role||body.p_role==='all'||body.p_role==='owned'&&p.is_owner||body.p_role==='member'&&p.is_member));
+      filtered.sort((a,b)=>body.p_sort==='name'?a.title.toLowerCase().localeCompare(b.title.toLowerCase())||a.id.localeCompare(b.id):String(b[body.p_sort==='updated'?'updated_at':'created_at']).localeCompare(String(a[body.p_sort==='updated'?'updated_at':'created_at']))||a.id.localeCompare(b.id));
+      return respond({accessible_total:all.length,total:filtered.length,rows:filtered.slice(body.p_offset,body.p_offset+body.p_limit)});
+    }
     if(path==='list_projects_page'){ if(mock.failProjects)return respond({message:'Preview project failure'},500); const rows=mock.navigationProjects??[{id:id(10),title:'Product workspace',is_owner:!mock.member,can_manage:!mock.member}];return respond({total:rows.length,rows:rows.slice(body.p_offset,body.p_offset+body.p_limit)}); }
+    if(path==='create_project_with_default_stages' && mock.projectBrowserProjects){const project={id:id(9000),title:body.p_title,description:body.p_description,stage_count:3,open_tasks:0,done_tasks:0,is_owner:true,is_member:false,can_manage:true,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};mock.projectBrowserProjects.push(project);return respond(project.id);}
+    if(path==='projects' && init.method==='PATCH' && mock.projectBrowserProjects){const target=url.searchParams.get('id')?.slice(3);const project=mock.projectBrowserProjects.find(p=>p.id===target);if(project)Object.assign(project,body,{updated_at:new Date().toISOString()});return respond(project?[{id:project.id}]:[]);}
+    if(path==='projects' && init.method==='DELETE' && mock.projectBrowserProjects){const target=url.searchParams.get('id')?.slice(3);const removed=mock.projectBrowserProjects.filter(p=>p.id===target);mock.projectBrowserProjects=mock.projectBrowserProjects.filter(p=>p.id!==target);return respond(removed.map(p=>({id:p.id})));}
+    if(path==='projects' && mock.projectBrowserProjects){const target=url.searchParams.get('id')?.slice(3);const p=mock.projectBrowserProjects.find(p=>p.id===target);return respond(p?{...p,owner_id:p.is_owner?user.id:id(99)}:null);}
     if(path==='projects')return respond(mock.denied?null:{id:id(10),title:'Product workspace',description:'A focused place to plan, build, and ship thoughtful product improvements. '+ 'Keep work visible, reduce friction, and bring the team along. '.repeat(4),owner_id:mock.member?id(99):user.id});
     if(path==='project_stages')return respond(stages);
     if(path==='project_labels')return respond([{id:id(31),project_id:id(10),name:'Product',colour:'#dce9ff'}]);
@@ -33,6 +60,7 @@
       const cursor=url.searchParams.get('or');if(cursor){const match=cursor.match(/position.gt.(\d+)/);if(match)list=list.filter(t=>t.position>Number(match[1]));}
       return respond(list.sort((a,b)=>a.position-b.position||a.id.localeCompare(b.id)).slice(0,Number(url.searchParams.get('limit')??1000)));
     }
+    if(path==='list_task_assignees' && mock.cardAssignees)return respond(mock.cardAssignees.filter(a=>body.p_task_ids.includes(a.task_id)));
     if(path==='list_task_assignees')return respond(body.p_task_ids.filter(t=>t===id(100)||t===id(200)).map(task_id=>({task_id,user_id:id(1),label:'Alex Morgan'})));
     if(path==='task_checklist_progress')return respond(body.p_task_ids.map(task_id=>({task_id,total:task_id===id(100)?5:0,completed:task_id===id(100)?2:0})));
     if(path==='get_task_checklist')return respond({items:[],total:0,completed:0});
@@ -67,7 +95,7 @@
     static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
     constructor(url,protocols){super();if(new URL(url).host!==window.__boardPreview.host)return new NativeSocket(url,protocols);this.url=url;this.readyState=0;window.__mockSocket=this;setTimeout(()=>{this.readyState=1;this.emit('open',new Event('open'));},20);}
     emit(name,event){this.dispatchEvent(event);this['on'+name]?.(event);}
-    send(data){try{const msg=JSON.parse(data);window.__lastSocketMessage=msg;if(Array.isArray(msg)&&['phx_join','heartbeat'].includes(msg[3]))setTimeout(()=>this.emit('message',new MessageEvent('message',{data:JSON.stringify([msg[0],msg[1],msg[2],'phx_reply',{status:'ok',response:{}}])})),10);}catch{}}
+    send(data){try{const msg=JSON.parse(data);window.__lastSocketMessage=msg;(window.__boardMock.socketMessages??=[]).push(msg);if(Array.isArray(msg)&&['phx_join','heartbeat'].includes(msg[3]))setTimeout(()=>this.emit('message',new MessageEvent('message',{data:JSON.stringify([msg[0],msg[1],msg[2],'phx_reply',{status:'ok',response:{}}])})),10);}catch{}}
     close(){this.readyState=3;this.emit('close',new CloseEvent('close'));}
   };
 })();

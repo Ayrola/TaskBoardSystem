@@ -53,7 +53,7 @@ export function openTaskViewModal({ task, stage, stages, projectId, onSave }) {
 
   const titleInput = element.querySelector('[data-task-title]');
   titleInput.value = task.title;
-  element.querySelector('[data-task-activity]').href = `/activity?project=${encodeURIComponent(projectId)}&task=${encodeURIComponent(task.id)}`;
+  element.querySelector('[data-task-activity]').href = `/projects/${encodeURIComponent(projectId)}/activity?task=${encodeURIComponent(task.id)}`;
   const stageInput = element.querySelector('[data-stage-input]');
   stageInput.replaceChildren(...stages.map(item => new Option(item.name, item.id)));
   const originalStageId = task.stageId ?? stage?.id;
@@ -154,8 +154,11 @@ export function openTaskViewModal({ task, stage, stages, projectId, onSave }) {
   setupAttachments();
   setupComments();
 
+  const initialDraft = JSON.stringify([titleInput.value, stageInput.value, deadlineInput.value, editor.getSemanticHTML()]);
+  const canLeave = () => !(saveBusy || checklistBusy || labelBusy || assignmentBusy || attachmentBusy) &&
+    (JSON.stringify([titleInput.value, stageInput.value, deadlineInput.value, editor?.getSemanticHTML()]) === initialDraft || window.confirm('Discard unsaved task changes?'));
   modal.show();
-  return { result: modal.result, destroy: modal.destroy };
+  return { result: modal.result, destroy: modal.destroy, canLeave };
 
   // Discussion: plain text only. Bodies are written with textContent (never innerHTML) and wrapped with CSS
   // pre-wrap, so markup typed by a user is shown literally. Pages are keyset-paged newest first; a generation

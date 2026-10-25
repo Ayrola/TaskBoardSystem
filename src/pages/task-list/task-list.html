@@ -1,0 +1,12 @@
+<section class="page-task-list" aria-labelledby="task-list-heading" aria-busy="true">
+ <header class="mb-4"><a class="small" href="/dashboard"><i class="bi bi-arrow-left" aria-hidden="true"></i> Dashboard</a><h1 id="task-list-heading" class="h2 mt-3">Tasks</h1><p class="text-body-secondary">Browse tasks in the current project.</p></header>
+ <form class="task-list-filters" aria-label="Task filters">
+  <div><label for="task-list-status" class="form-label">Status</label><select id="task-list-status" name="status" class="form-select"><option value="all">All tasks</option><option value="open">Open tasks</option><option value="done">Done tasks</option></select></div>
+  <button type="submit" class="btn btn-primary" data-apply disabled>Apply filters</button><a class="btn btn-outline-secondary" href="/projects" data-clear hidden>Clear Filters</a>
+ </form>
+ <p class="small text-body-secondary my-3" data-filter-summary></p>
+ <div data-error class="alert alert-danger" role="alert" hidden><p data-error-text></p><button type="button" class="btn btn-outline-danger" data-retry>Retry</button></div>
+ <p data-status role="status">Loading tasks…</p>
+ <ul class="list-group" data-results aria-label="Accessible tasks"></ul>
+ <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3" aria-label="Tasks pagination" data-pager hidden></nav>
+</section>

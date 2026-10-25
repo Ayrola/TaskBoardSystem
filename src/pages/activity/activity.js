@@ -2,7 +2,7 @@ import html from './activity.html?raw';
 import { renderFragment } from '../../utils/render.js';
 import { formatDateTime } from '../../utils/dates.js';
 import { activitySummary } from '../../utils/activity.js';
-import { listTaskActivity, listActivityProjects, ACTIVITY_PAGE_SIZE } from '../../services/activity-service.js';
+import { listTaskActivity, ACTIVITY_PAGE_SIZE } from '../../services/activity-service.js';
 import { isUuid } from '../../utils/validation.js';
 import { pageFromQuery, renderPager, totalPages } from '../../utils/pager.js';
 export const title = 'Task activity';
@@ -15,7 +15,7 @@ export function mount(container, ctx) {
   const status = root.querySelector('[data-status]');
   const refresh = root.querySelector('[data-refresh]');
   const pager = root.querySelector('[data-pager]');
-  const projectId = ctx.query.project || null;
+  const projectId = ctx.project.id;
   const taskId = ctx.query.task || null;
   const page = pageFromQuery(ctx.query);
   const snapshot = ctx.query.snapshot || null;
@@ -28,9 +28,8 @@ export function mount(container, ctx) {
     const task=form.elements.task.value.trim();
     if(task && !isUuid(task)) { fail('Enter a valid task ID or leave it empty.'); form.elements.task.focus(); return; }
     const query=new URLSearchParams();
-    if(form.elements.project.value) query.set('project',form.elements.project.value);
     if(task) query.set('task',task);
-    ctx.navigate(`/activity${query.size ? `?${query}` : ''}`);
+    ctx.navigate(`/projects/${projectId}/activity${query.size ? `?${query}` : ''}`);
   });
   function build(entry) {
     const item=node('li','','list-group-item');
@@ -49,19 +48,14 @@ export function mount(container, ctx) {
     loading=true; refresh.disabled=true; root.setAttribute('aria-busy','true');
     errorBox.hidden=true; status.textContent='Loading activity…'; results.replaceChildren(); pager.hidden=true;
     try {
-      const [projects,data]=await Promise.all([
-        listActivityProjects({signal:ctx.signal}), listTaskActivity({projectId,taskId,page,snapshot,signal:ctx.signal}),
-      ]);
+      const data = await listTaskActivity({projectId,taskId,page,snapshot,signal:ctx.signal});
       if(ctx.signal.aborted) return;
-      form.elements.project.replaceChildren(new Option('All accessible projects',''),...projects.map(project=>new Option(project.title,project.id)));
-      if(projectId && !projects.some(project=>project.id===projectId)) throw new Error('Project not found or no longer accessible.');
-      form.elements.project.value=projectId??''; form.elements.project.disabled=false;
       results.append(...data.rows.map(build));
       status.textContent=data.total?'':'No activity found for these filters.';
       if(page>totalPages(data.total,ACTIVITY_PAGE_SIZE)) {
         status.textContent='This page no longer has entries.';
         const query=new URLSearchParams(location.search); query.delete('page');
-        const first=node('a','Return to the first page'); first.href=`/activity${query.size?`?${query}`:''}`; results.append(first);
+        const first=node('a','Return to the first page'); first.href=`/projects/${projectId}/activity${query.size?`?${query}`:''}`; results.append(first);
       } else {
         renderPager(pager,{page,total:data.total,pageSize:ACTIVITY_PAGE_SIZE});
         for (const link of pager.querySelectorAll('a')) {
@@ -75,8 +69,9 @@ export function mount(container, ctx) {
   ctx.cleanup.listen(refresh,'click',()=>{
     if (snapshot || page > 1) {
       const query=new URLSearchParams(location.search); query.delete('snapshot'); query.delete('page');
-      ctx.navigate(`/activity${query.size?`?${query}`:''}`);
+      ctx.navigate(`/projects/${projectId}/activity${query.size?`?${query}`:''}`);
     } else load();
   });
+  ctx.onProjectRefresh(load);
   load();
 }

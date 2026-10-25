@@ -22,7 +22,12 @@ A Trello-style application where users manage projects, stages and tasks.
 ## Canonical routes
 - `/`
 - `/login`
-- `/dashboard`
+- `/dashboard` (legacy entry: resolves the last accessible project)
+- `/projects/:id/dashboard`
+- `/projects/:id/labels`
+- `/projects/:id/deadlines`
+- `/projects/:id/activity`
+- `/projects/:id/task-list`
 - `/projects`
 - `/projects/add`
 - `/projects/:id/edit`
@@ -30,3 +35,5 @@ A Trello-style application where users manage projects, stages and tasks.
 - `/projects/:id/users`
 
 - Admin pages live under /admin; guard routes but rely on database authorization. Stage delete/reorder go through RPCs only; no Auth user administration in browser code.
+
+- Project feature pages receive verified `ctx.project` from the router. The URL project ID is authoritative; all queries must include its scope. Never use the last-project localStorage preference as access authorization. Use `ctx.onProjectRefresh` for non-board project refreshes and `ctx.signal`/cleanup for lifecycle isolation.

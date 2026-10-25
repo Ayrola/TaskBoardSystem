@@ -1,0 +1,8 @@
+.page-task-list .task-list-filters { display:flex; flex-wrap:wrap; align-items:end; gap:12px; padding:16px; background:var(--app-card); border:1px solid var(--app-border); border-radius:10px; }
+.page-task-list .task-list-filters > div { flex:1 1 180px; min-width:0; }
+.page-task-list .list-group-item { background:var(--app-card); padding:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.page-task-list .task-list-title { color:var(--app-link); font-weight:600; overflow-wrap:anywhere; }
+.page-task-list .task-list-context { color:var(--app-muted); font-size:.8rem; margin-top:5px; overflow-wrap:anywhere; }
+.page-task-list .task-list-state { color:var(--app-muted); font-size:.8rem; white-space:nowrap; }
+.page-task-list :is(a,button,input,select):focus-visible { outline:3px solid var(--app-focus); outline-offset:3px; }
+.page-task-list .task-list-content { min-width:0; }

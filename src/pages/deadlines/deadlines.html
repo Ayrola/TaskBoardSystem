@@ -1,16 +1,13 @@
 <section aria-labelledby="deadlines-heading" data-deadlines>
   <h1 class="h2" id="deadlines-heading">Deadlines</h1>
   <p class="text-body-secondary">Open tasks only. Today includes the whole local calendar day, including tasks already overdue. Upcoming starts at tomorrow’s midnight.</p>
+  <nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Deadline buckets" data-bucket-counts></nav>
   <form class="row g-3 mb-4" data-filters>
     <div class="col-md-3">
       <label for="deadline-bucket" class="form-label">Show</label>
       <select class="form-select" id="deadline-bucket" name="bucket">
         <option value="overdue">Overdue</option><option value="today">Today</option><option value="upcoming">Upcoming</option>
       </select>
-    </div>
-    <div class="col-md-3">
-      <label for="deadline-project" class="form-label">Project</label>
-      <select class="form-select" id="deadline-project" name="project" disabled><option value="">All accessible projects</option></select>
     </div>
     <div class="col-md-4">
       <label for="deadline-timezone" class="form-label">Display timezone</label>

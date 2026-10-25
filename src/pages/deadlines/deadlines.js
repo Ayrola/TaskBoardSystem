@@ -1,7 +1,7 @@
 import html from './deadlines.html?raw';
 import { renderFragment } from '../../utils/render.js';
 import { displayTimezone, formatDeadline, saveDisplayTimezone, validTimezone, browserTimezone } from '../../utils/deadlines.js';
-import { listDeadlines, listDeadlineProjects, DEADLINES_PAGE_SIZE } from '../../services/deadlines-service.js';
+import { listDeadlines, DEADLINES_PAGE_SIZE } from '../../services/deadlines-service.js';
 import { pageFromQuery, renderPager, totalPages } from '../../utils/pager.js';
 export const title = 'Deadlines';
 export function mount(container, ctx) {
@@ -15,10 +15,9 @@ export function mount(container, ctx) {
   const pager = root.querySelector('[data-pager]');
   const bucket = ctx.query.bucket ?? 'overdue';
   const timezone = ctx.query.timezone ?? displayTimezone();
-  const projectId = ctx.query.project || null;
+  const projectId = ctx.project.id;
   const page = pageFromQuery(ctx.query);
   let generation = 0;
-  let projectsLoaded = false;
   let loading = false;
   form.elements.bucket.value = bucket;
   form.elements.timezone.value = timezone;
@@ -35,8 +34,7 @@ export function mount(container, ctx) {
     }
     saveDisplayTimezone(form.elements.timezone.value);
     const query = new URLSearchParams({ bucket: form.elements.bucket.value, timezone: form.elements.timezone.value });
-    if (form.elements.project.value) query.set('project', form.elements.project.value);
-    ctx.navigate(`/deadlines?${query}`);
+    ctx.navigate(`/projects/${projectId}/deadlines?${query}`);
   });
   async function load() {
     if (loading) return;
@@ -44,16 +42,18 @@ export function mount(container, ctx) {
     root.setAttribute('aria-busy', 'true'); errorBox.hidden = true; retry.hidden = true;
     status.textContent = 'Loading deadlines…'; results.replaceChildren(); pager.hidden = true;
     try {
-      if (!projectsLoaded) {
-        const projects = await listDeadlineProjects({ signal: ctx.signal });
-        if (ctx.signal.aborted || current !== generation) return;
-        form.elements.project.replaceChildren(new Option('All accessible projects', ''), ...projects.map((project) => new Option(project.title, project.id)));
-        if (projectId && !projects.some((project) => project.id === projectId)) throw new Error('Project not found or no longer accessible.');
-        form.elements.project.value = projectId ?? '';
-        form.elements.project.disabled = false; projectsLoaded = true;
-      }
-      const result = await listDeadlines({ bucket, timezone, projectId, page, signal: ctx.signal });
+      const [result, counts] = await Promise.all([
+        listDeadlines({ bucket, timezone, projectId, page, signal: ctx.signal }),
+        Promise.all(['overdue', 'today', 'upcoming'].map(async selected => [selected, (await listDeadlines({ bucket: selected, timezone, projectId, countOnly: true, signal: ctx.signal })).total])),
+      ]);
       if (ctx.signal.aborted || current !== generation) return;
+      root.querySelector('[data-bucket-counts]').replaceChildren(...counts.map(([value, count]) => {
+        const link = document.createElement('a'); link.className = `btn btn-sm ${value === bucket ? 'btn-primary' : 'btn-outline-secondary'}`;
+        link.textContent = `${value[0].toUpperCase() + value.slice(1)} · ${count}`;
+        link.href = `/projects/${projectId}/deadlines?${new URLSearchParams({ bucket: value, timezone })}`;
+        if (value === bucket) link.setAttribute('aria-current', 'page');
+        return link;
+      }));
       root.querySelector('[data-zone-summary]').textContent = `Dates shown in ${timezone}. Today: ${formatDeadline(result.day_start, timezone)} to ${formatDeadline(result.day_end, timezone)} (end excluded).`;
       for (const task of result.rows) {
         const li = document.createElement('li'); li.className = 'list-group-item';
@@ -72,9 +72,10 @@ export function mount(container, ctx) {
     } catch (error) { if (!ctx.signal.aborted && current === generation) fail(error.message); }
     finally { loading = false; if (!ctx.signal.aborted) root.setAttribute('aria-busy', 'false'); }
   }
-  ctx.cleanup.listen(retry, 'click', () => { projectsLoaded = false; load(); });
+  ctx.cleanup.listen(retry, 'click', load);
   const timer = setInterval(() => { if (!document.hidden) load(); }, 60000);
   ctx.cleanup.add(() => clearInterval(timer));
   ctx.cleanup.listen(document, 'visibilitychange', () => { if (!document.hidden) load(); });
+  ctx.onProjectRefresh(load);
   load();
 }

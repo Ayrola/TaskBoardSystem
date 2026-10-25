@@ -14,7 +14,6 @@
 .sidebar-link { display:flex; align-items:center; gap:10px; min-height:38px; padding:8px 10px; margin:1px 0; border:0; border-radius:5px; text-decoration:none; color:var(--nav-ink); background:transparent; text-align:left; width:100%; line-height:1.35; }
 .sidebar-link i { flex:none; width:18px; text-align:center; font-size:16px; }
 .sidebar-link[aria-current=page],.sidebar-project.active > .sidebar-project-row { background:var(--nav-active); color:var(--nav-blue); }
-.sidebar-tools { padding-bottom:12px; border-bottom:1px solid var(--nav-line); }
 .sidebar-section-heading { padding:18px 10px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
 .sidebar-section-heading a { color:var(--nav-muted); text-decoration:none; display:flex; justify-content:space-between; }
 .sidebar-search { position:relative; margin:0 0 10px; }
@@ -25,9 +24,6 @@
 .sidebar-project-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; }
 .sidebar-project-icon,.sidebar-avatar { display:grid; place-items:center; width:25px; height:25px; flex:none; font-size:10px; font-weight:700; border-radius:5px; background:var(--app-hover); color:var(--app-secondary); }
 .sidebar-project.active .sidebar-project-icon { background:var(--app-selected); color:var(--app-link); }
-.sidebar-project-row .nav-icon-button { min-width:32px; min-height:38px; }
-.sidebar-subnav { margin:3px 0 5px 23px; padding-left:10px; border-left:1px solid var(--nav-line); }
-.sidebar-subnav .sidebar-link { font-size:13px; min-height:34px; }
 .sidebar-status { padding:10px; font-size:13px; color:var(--nav-muted); overflow-wrap:anywhere; }
 .sidebar-create { margin-top:10px; color:var(--nav-blue); }
 .sidebar-account { border-top:1px solid var(--nav-line); padding:12px 10px; }
@@ -53,5 +49,6 @@
  .sidebar-close { display:inline-grid; }
  .sidebar-collapse { display:none; }
  .sidebar-link { min-height:44px; }
- .sidebar-subnav .sidebar-link { min-height:40px; }
 }
+[data-current-project-name] { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--nav-muted); }
+[data-current-project] { padding-bottom:12px; border-bottom:1px solid var(--nav-line); }

@@ -1,3 +1,4 @@
+import { checkWholeCardDrag } from './task-card-drag-checks.mjs';
 export async function checkBoardBrowser({ evaluate, send, wait, saveScreenshot, errors }) {
 const assert=(value,message)=>{if(!value)throw new Error(message);};
 const click=selector=>evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
@@ -81,29 +82,31 @@ await openMenu('New board task');await click('[data-card-menu]:popover-open [dat
 await click('.confirm-dialog [data-dialog-confirm]');await settled();
 assert(await evaluate(`!window.__boardMock.tasks.some(t=>t.title==='New board task')`),'Deleted task');
 const broadcast=async(event='project_changed')=>evaluate(`window.__mockSocket.emit('message',new MessageEvent('message',{data:JSON.stringify([null,null,'realtime:project:00000000-0000-0000-0000-000000000010:board','broadcast',{event:${JSON.stringify(event)},payload:{project_id:'00000000-0000-0000-0000-000000000010'},type:'broadcast'}])}))`);
-// Real pointer events exercise Sortable's native drag path and the persisted relative placement service.
+// Real pointer events exercise Sortable's pointer drag path and the persisted relative placement service.
 await evaluate(`document.querySelector('[data-board]').scrollIntoView({block:'start'});document.querySelector('[data-cards]').scrollTop=0`);
-const coords=await evaluate(`(()=>{const from=document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000011"] [data-drag-handle]').getBoundingClientRect();const to=document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000013"] [data-cards]').getBoundingClientRect();return {x:from.x+from.width/2,y:from.y+from.height/2,tx:to.x+to.width/2,ty:to.y+80,id:document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000011"] .task-card').dataset.taskId}})()`);
+const coords=await evaluate(`(()=>{const from=document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000011"] [data-task-title]').getBoundingClientRect();const to=document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000013"] [data-cards]').getBoundingClientRect();return {x:from.x+from.width/2,y:from.y+from.height/2,tx:to.x+to.width/2,ty:to.y+80,id:document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000011"] .task-card').dataset.taskId}})()`);
 await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:coords.x,y:coords.y});
 await send('Input.dispatchMouseEvent',{type:'mousePressed',x:coords.x,y:coords.y,button:'left',buttons:1,clickCount:1});
 for(let i=1;i<=24;i++){await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:coords.x+(coords.tx-coords.x)*i/24,y:coords.y+(coords.ty-coords.y)*i/24,button:'left',buttons:1});await new Promise(r=>setTimeout(r,25));}
 await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:coords.tx,y:coords.ty,button:'left',buttons:0,clickCount:1});
 await wait(`window.__boardMock.tasks.find(t=>t.id==='${coords.id}').stage_id==='00000000-0000-0000-0000-000000000013'`);await settled();
-console.log('Native pointer drag persisted.');
+console.log('Pointer drag persisted.');
 await broadcast();await settled();
 assert(await evaluate(`document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000013"] .task-card')?.dataset.taskId==='${coords.id}'`),'Move survives authoritative reload');
 // Reorder within a column using the same trusted pointer drag path.
-const reorder=await evaluate(`(()=>{const cards=[...document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000011"] [data-cards]').children];const a=cards[0].querySelector('[data-drag-handle]').getBoundingClientRect();const b=cards[1].getBoundingClientRect();return {id:cards[0].dataset.taskId,after:cards[1].dataset.taskId,x:a.x+a.width/2,y:a.y+a.height/2,tx:b.x+b.width/2,ty:b.bottom-8}})()`);
+const reorder=await evaluate(`(()=>{const cards=[...document.querySelector('[data-stage-id="00000000-0000-0000-0000-000000000011"] [data-cards]').children];const a=cards[0].querySelector('[data-task-title]').getBoundingClientRect();const b=cards[1].getBoundingClientRect();return {id:cards[0].dataset.taskId,after:cards[1].dataset.taskId,x:a.x+a.width/2,y:a.y+a.height/2,tx:b.x+b.width/2,ty:b.bottom-8}})()`);
 await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:reorder.x,y:reorder.y});await send('Input.dispatchMouseEvent',{type:'mousePressed',x:reorder.x,y:reorder.y,button:'left',buttons:1,clickCount:1});
 for(let i=1;i<=20;i++){await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:reorder.x+(reorder.tx-reorder.x)*i/20,y:reorder.y+(reorder.ty-reorder.y)*i/20,button:'left',buttons:1});await new Promise(r=>setTimeout(r,25));}
 await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:reorder.tx,y:reorder.ty,button:'left',buttons:0,clickCount:1});
 await wait(`window.__boardMock.calls.filter(c=>c.path==='move_task_relative').at(-1)?.body.p_after_task_id==='${reorder.after}'`);await settled();
 await evaluate(`document.querySelectorAll('.toast .btn-close').forEach(button=>button.click())`);
+const cardDrag = await checkWholeCardDrag({evaluate,send,wait,protectedIds:[coords.id,reorder.id,reorder.after]});
 // A real page reload rereads the persisted mock backend, including moved/reordered tasks.
 await send('Page.reload'); await new Promise(resolve=>setTimeout(resolve,400));
 await wait(`document.querySelector('[data-state="board"]')?.hidden===false && document.querySelector('[data-live-status]')?.textContent==='Live updates connected'`);
 assert(await evaluate(`window.__boardMock.tasks.find(t=>t.id==='${coords.id}').stage_id==='00000000-0000-0000-0000-000000000013'`),'Moved stage persists across page reload');
 assert(await evaluate(`window.__boardMock.tasks.find(t=>t.id==='${reorder.id}').position>window.__boardMock.tasks.find(t=>t.id==='${reorder.after}').position`),'Reordering persists across page reload');
+assert(await evaluate(`window.__boardMock.tasks.find(t=>t.id==='${cardDrag.completedId}').done===true`),'Handle-move completion survives reload');
 // Mobile, long titles, optional metadata and safe rendering.
 await evaluate(`window.__boardMock.tasks[1].title='An exceptionally long task title '+ 'with clear words '.repeat(15);window.__boardMock.tasks[1].description='<script>window.__xss=true</script><p>Visible description</p>';scrollTo(0,0)`);await broadcast();await settled();
 await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
@@ -113,7 +116,7 @@ assert(await evaluate(`window.__xss!==true`),'Task text safely rendered');
 await saveScreenshot('mobile.png');
 await click('[data-toggle-filters]');assert(await evaluate(`document.querySelector('[data-filter-controls]').classList.contains('is-open')`),'Mobile filter controls expand');await click('[data-toggle-filters]');
 await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
-const touchTarget=await evaluate(`(()=>{const r=document.querySelector('.task-card [data-open-task]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+Math.min(r.height/2,20)}})()`);
+const touchTarget=await evaluate(`(()=>{const r=document.querySelector('.task-card [data-task-title]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+Math.min(r.height/2,20)}})()`);
 await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[touchTarget]});
 await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
 await wait(`document.querySelector('.task-view-modal.show') && document.activeElement.matches('#task-view-title-input')`);
@@ -132,6 +135,6 @@ await click('[data-add-primary]');await wait(`document.querySelector('.task-form
 await evaluate(`window.__boardMock.denied=true`);await broadcast('access_changed');
 await wait(`document.querySelector('[data-state="notfound"]').hidden===false && !document.querySelector('.modal')`);
 assert(errors.length===0,'No uncaught browser errors: '+errors.join('\n'));
-console.log('PASS: full-board search, status/clear/no matches, description expansion, grouped dialogs/focus, failed and successful saves, filter retention, add/edit/delete, keyboard move/failure restoration, native drag, authoritative reload, desktop/mobile overflow, safe long text, mobile controls/dialogs, Realtime, permission hints, empty board, API failure/retry and access loss.');
+console.log('PASS: full-board search, status/clear/no matches, description expansion, grouped dialogs/focus, failed and successful saves, filter retention, add/edit/delete, keyboard move/failure restoration, whole-card drag, authoritative reload, desktop/mobile overflow, safe long text, mobile controls/dialogs, Realtime, permission hints, empty board, API failure/retry and access loss.');
 
 }

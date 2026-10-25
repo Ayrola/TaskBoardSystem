@@ -160,6 +160,9 @@ export function openTaskFormModal({ mode, stages, stageId, task, onSubmit }) {
   element.addEventListener('hidden.bs.modal', release, { signal });
   signal.addEventListener('abort', release, { once: true });
 
+  const draft = () => JSON.stringify([titleInput.value, stageSelect.value, deadlineInput.value, quill?.getSemanticHTML()]);
+  const initialDraft = draft();
+  const canLeave = () => !busy && (draft() === initialDraft || window.confirm('Discard unsaved task changes?'));
   modal.show();
-  return { result: modal.result, destroy: modal.destroy };
+  return { result: modal.result, destroy: modal.destroy, canLeave };
 }

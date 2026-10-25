@@ -21,7 +21,13 @@
     "test:board:browser": "node scripts/test-board-browser.mjs",
     "test:sidebar:browser": "BOARD_CHECK_SIDEBAR=1 node scripts/test-board-browser.mjs",
     "test:theme": "node scripts/test-theme.mjs",
-    "test:theme:browser": "BOARD_CHECK_THEME=1 node scripts/test-board-browser.mjs"
+    "test:theme:browser": "BOARD_CHECK_THEME=1 node scripts/test-board-browser.mjs",
+    "test:projects": "node scripts/test-project-browser.mjs",
+    "test:projects:browser": "BOARD_CHECK_PROJECTS=1 node scripts/test-board-browser.mjs",
+    "test:dashboard:browser": "BOARD_CHECK_DASHBOARD=1 node scripts/test-board-browser.mjs",
+    "test:cards:browser": "BOARD_CHECK_CARDS=1 node scripts/test-board-browser.mjs",
+    "test:context:browser": "BOARD_CHECK_CONTEXT=1 node scripts/test-board-browser.mjs",
+    "test:context": "node scripts/test-project-navigation.mjs && node --experimental-vm-modules scripts/test-project-context.mjs"
   },
   "keywords": [],
   "author": "",

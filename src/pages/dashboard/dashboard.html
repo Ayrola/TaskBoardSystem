@@ -14,39 +14,14 @@
     <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
   </div>
 
-  <div data-state="empty" class="card" hidden>
+  <div data-state="stats" class="row g-3 mb-0" data-summary-cards hidden></div>
+  <div data-empty class="card mt-4" hidden>
     <div class="card-body text-center py-5">
       <i class="bi bi-inbox display-5 text-body-secondary" aria-hidden="true"></i>
-      <h2 class="h5 mt-3">You have no projects yet</h2>
-      <p class="text-body-secondary mb-3">Create your first project to start tracking tasks.</p>
-      <a class="btn btn-primary" href="/projects/add">Create a project</a>
+      <h2 class="h5 mt-3">No tasks in this project yet</h2>
+      <p class="text-body-secondary mb-3">Open the board to add your first task.</p>
+      <a class="btn btn-primary" data-open-board href="/projects">Open board</a>
     </div>
   </div>
 
-  <dl data-state="stats" class="row g-3 mb-0" hidden>
-    <div class="col-6 col-lg-3">
-      <div class="card h-100"><div class="card-body">
-        <dt class="text-body-secondary fw-normal"><i class="bi bi-folder2-open" aria-hidden="true"></i> Projects</dt>
-        <dd class="display-6 mb-0" data-stat="projectCount">0</dd>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card h-100"><div class="card-body">
-        <dt class="text-body-secondary fw-normal"><i class="bi bi-card-checklist" aria-hidden="true"></i> Total tasks</dt>
-        <dd class="display-6 mb-0" data-stat="totalTasks">0</dd>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card h-100"><div class="card-body">
-        <dt class="text-body-secondary fw-normal"><i class="bi bi-circle" aria-hidden="true"></i> Open tasks</dt>
-        <dd class="display-6 mb-0" data-stat="openTasks">0</dd>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card h-100"><div class="card-body">
-        <dt class="text-body-secondary fw-normal"><i class="bi bi-check-circle" aria-hidden="true"></i> Done tasks</dt>
-        <dd class="display-6 mb-0" data-stat="doneTasks">0</dd>
-      </div></div>
-    </div>
-  </dl>
 </section>

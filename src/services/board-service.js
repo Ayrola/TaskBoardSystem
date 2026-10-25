@@ -47,13 +47,13 @@ function afterCursor(query, cursor) {
 
 // Reads `limit` tasks after `cursor`. One extra row is requested so the end of the list is known exactly.
 // Resolves { tasks, hasMore, nextCursor } where nextCursor is the position and id of the last returned task.
-export async function fetchColumnTasks(stageId, { cursor = null, limit = BOARD_PAGE_SIZE, signal } = {}) {
-  if (!isUuid(stageId)) throw new Error('Could not load tasks.');
+export async function fetchColumnTasks(stageId, { projectId, cursor = null, limit = BOARD_PAGE_SIZE, signal } = {}) {
+  if (!isUuid(stageId) || !isUuid(projectId)) throw new Error('Could not load tasks.');
   const size = Math.min(Math.max(1, limit), BOARD_RELOAD_LIMIT);
 
   const { data, error } = await withSignal(
     afterCursor(
-      supabaseClient.from('tasks').select(TASK_COLUMNS).eq('stage_id', stageId),
+      supabaseClient.from('tasks').select(TASK_COLUMNS).eq('stage_id', stageId).eq('project_id', projectId),
       cursor,
     )
       .order('position')
@@ -120,13 +120,13 @@ export async function getBoard(projectId, { signal, depths, complete = false, on
       const index = nextStage++;
       const stage = stages[index];
       let page = await fetchColumnTasks(stage.id, {
-        limit: Math.max(BOARD_PAGE_SIZE, depths?.get(stage.id) ?? 0), signal,
+        projectId: project.id, limit: Math.max(BOARD_PAGE_SIZE, depths?.get(stage.id) ?? 0), signal,
       });
       const tasks = [...page.tasks];
       scanned += page.tasks.length; onProgress?.(scanned);
       const known = new Set(tasks.map(task => task.id));
       while (complete && page.hasMore) {
-        page = await fetchColumnTasks(stage.id, { cursor: page.nextCursor, limit: BOARD_RELOAD_LIMIT, signal });
+        page = await fetchColumnTasks(stage.id, { projectId: project.id, cursor: page.nextCursor, limit: BOARD_RELOAD_LIMIT, signal });
         for (const task of page.tasks) if (!known.has(task.id)) { tasks.push(task); known.add(task.id); }
         scanned += page.tasks.length; onProgress?.(scanned);
       }
