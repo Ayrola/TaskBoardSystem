@@ -1,6 +1,6 @@
 import { createTaskCard, renderCardDeadline } from '../../components/task-card/task-card.js';
 import { readBoardDisplay, saveBoardDisplay, BOARD_DISPLAY_KEY } from '../../services/board-display-service.js';
-import { EMPTY_BOARD_FILTERS, hasBoardFilters, matchesBoardTask } from '../../utils/board-filters.js';
+import { EMPTY_BOARD_FILTERS, boardFiltersFromQuery, hasBoardFilters, matchesBoardTask } from '../../utils/board-filters.js';
 import Sortable from 'sortablejs';
 import html from './tasks.html?raw';
 import './tasks.css';
@@ -13,6 +13,8 @@ import { subscribeToBoard } from '../../services/board-realtime.js';
 import { onAuthChange } from '../../services/auth-service.js';
 import { openTaskFormModal } from '../../components/task-form-modal/task-form-modal.js';
 import { openTaskViewModal } from '../../components/task-view-modal/task-view-modal.js';
+import { openAddStageModal } from '../../components/add-stage-modal/add-stage-modal.js';
+import { createStage } from '../../services/stages-service.js';
 import { openMoveTaskModal } from '../../components/move-task-modal/move-task-modal.js';
 import { openConfirmDialog } from '../../components/confirm-dialog/confirm-dialog.js';
 import { showSuccess, showInfo, showError, TOAST_MESSAGES } from '../../services/toast-service.js';
@@ -30,12 +32,14 @@ export function mount(container, ctx) {
   const board = root.querySelector('[data-board]');
   const columnTemplate = root.querySelector('[data-column-template]');
   const actions = root.querySelector('[data-actions]');
-  const filters = { ...EMPTY_BOARD_FILTERS };
+  const filters = boardFiltersFromQuery(ctx.query);
   let filterTimer = 0;
   let filterLoading = false;
   let loadController = null;
   const searchInput = root.querySelector('[data-search]');
   const filterStatus = root.querySelector('[data-filter-status]');
+  searchInput.value = filters.search;
+  for (const select of root.querySelectorAll('[data-filter]')) if (filters[select.dataset.filter]) select.value = filters[select.dataset.filter];
   const descriptionCache = new WeakMap();
   const filtered = () => hasBoardFilters(filters);
   const plainDescription = (task) => {
@@ -404,6 +408,8 @@ export function mount(container, ctx) {
     setText(root, '[data-project-stats]', `${taskTotal} tasks · ${completedTotal} completed · ${stages.length} stages`);
     fillFilterOptions(root.querySelector('[data-filter="stage"]'), stages, 'All stages', stage => stage.name, filters.stage);
     fillFilterOptions(root.querySelector('[data-filter="label"]'), labels ?? [], 'All labels', label => label.name, filters.label);
+    const assignees = new Map(stages.flatMap(stage => stage.tasks.flatMap(task => (task.assignees ?? []).map(person => [person.user_id, { id: person.user_id, name: person.label ?? `User ${person.user_id.slice(0,8)}` }]))));
+    fillFilterOptions(root.querySelector('[data-filter="assignee"]'), [...assignees.values()].sort((a,b) => a.name.localeCompare(b.name)), 'All people', person => person.name, filters.assignee);
     fillFilterOptions(root.querySelector('[data-stage-jump]'), stages, null, stage => stage.name);
 
     root.querySelector('[data-link="edit"]').hidden = !project.canManage;
@@ -427,9 +433,19 @@ export function mount(container, ctx) {
     const totalTasks = stages.reduce((sum, stage) => sum + stage.taskCount, 0);
     root.querySelector('[data-no-stages]').hidden = stages.length > 0;
     root.querySelector('[data-empty-project]').hidden = totalTasks > 0 || stages.length === 0;
-    board.hidden = stages.length === 0;
+    board.hidden = stages.length === 0 && !project.canManage;
     destroySortables();
+    const scrollLeft = board.scrollLeft;
     board.replaceChildren(...stages.map(buildColumn));
+    if (project.canManage) {
+      const addStage = document.createElement('button');
+      addStage.type = 'button';
+      addStage.className = 'board-add-stage';
+      addStage.dataset.addStage = '';
+      addStage.textContent = '+ Add Stage';
+      board.append(addStage);
+    }
+    board.scrollLeft = scrollLeft;
     initSortables();
     updateToolbar();
     requestAnimationFrame(sizeBoard);
@@ -439,6 +455,14 @@ export function mount(container, ctx) {
       if (top) column.querySelector('[data-cards]').scrollTop = top;
     }
   }
+
+  ctx.cleanup.listen(board, 'click', event => {
+    if (!event.target.closest('[data-add-stage]') || !data?.project.canManage) return;
+    runFlow(() => runDialog(() => openAddStageModal({
+      stages: data.stages,
+      onSave: values => createStage(data.project.id, values),
+    })), { addStage: true });
+  });
 
   // `quiet` refreshes in place (after a change) without replacing the board with the loading state.
   // A reload re-reads every column from the top down to the depth currently shown (plus `boost` rows for a column
@@ -468,6 +492,11 @@ export function mount(container, ctx) {
       filterLoading = false;
       render(loaded);
       show('board');
+      if (ctx.query.add === '1' && !linkedTaskOpened && loaded.stages.length) {
+        linkedTaskOpened = true;
+        const stage = loaded.stages.find(stage => !stage.isDone) ?? loaded.stages[0];
+        runFlow(() => addTask(stage.id), { stageId: stage.id });
+      }
       if (ctx.query.task && !linkedTaskOpened) {
         linkedTaskOpened = true;
         openLinkedTask(ctx.query.task);
@@ -573,12 +602,12 @@ export function mount(container, ctx) {
     restoreFocus(focusTarget);
   }
 
-  function restoreFocus({ taskId, stageId } = {}) {
-    const selector = taskId
+  function restoreFocus({ taskId, stageId, addStage } = {}) {
+    const selector = addStage ? '[data-add-stage]' : taskId
       ? `[data-task-id="${CSS.escape(taskId)}"] [data-open-task]`
       : `[data-stage-id="${CSS.escape(stageId ?? '')}"] [data-add]`;
     const target = root.querySelector(selector) ?? root.querySelector('[data-add-primary]') ?? root.querySelector('h1');
-    target?.focus();
+    target?.focus({ preventScroll: Boolean(addStage) });
   }
 
   const findTask = (taskId) => {

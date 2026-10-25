@@ -82,12 +82,12 @@ body { background-color:var(--app-page); color:var(--app-text); }
 }
 @media(max-width:767.98px) { .theme-selector button { min-height:44px; } }
 /* Custom task primary buttons need distinct foregrounds from link accents. */
-:is(.task-view-modal,.task-form-modal,.move-task-modal,.page-tasks) .btn-primary {
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal,.page-tasks) .btn-primary {
  --bs-btn-bg:var(--app-button-bg); --bs-btn-border-color:var(--app-button-bg); --bs-btn-color:var(--app-button-text);
  --bs-btn-hover-bg:var(--app-button-hover); --bs-btn-hover-border-color:var(--app-button-hover); --bs-btn-hover-color:var(--app-button-text);
  background-color:var(--app-button-bg); border-color:var(--app-button-bg); color:var(--app-button-text);
 }
-:is(.task-view-modal,.task-form-modal,.move-task-modal,.page-tasks) .btn-primary:hover { background-color:var(--app-button-hover); border-color:var(--app-button-hover); }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal,.page-tasks) .btn-primary:hover { background-color:var(--app-button-hover); border-color:var(--app-button-hover); }
 /* Quill Snow has fixed light colours; these selectors only affect our task editors. */
 :is(.task-view-modal,.task-form-modal) :is(.ql-toolbar.ql-snow,.ql-container.ql-snow) { background:var(--app-card); color:var(--app-text); border-color:var(--app-border); }
 :is(.task-view-modal,.task-form-modal) .ql-snow .ql-stroke { stroke:var(--app-secondary); }

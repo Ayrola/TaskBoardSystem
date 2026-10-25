@@ -1,16 +1,16 @@
 @import './taskboard-tokens.css';
 /* Shared task surfaces; deliberately scoped to task dialogs. */
 
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-content { border: 1px solid var(--tb-line); border-radius: 14px; box-shadow: var(--app-shadow-raised); overflow: hidden; }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-header { align-items: flex-start; padding: 20px 24px; border-color: var(--tb-line); }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-title { font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; line-height: 1.4; overflow-wrap: anywhere; }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-header .btn-close { flex-shrink: 0; margin-left: auto; min-width: 20px; min-height: 20px; }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-body { padding: 24px; overscroll-behavior-y: contain; }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-footer { padding: 14px 24px; background: var(--app-column); border-color: var(--tb-line); gap: 8px; }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .btn { border-radius: 7px; font-size: .82rem; min-height: 36px; }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) .btn-primary { background: var(--tb-accent); border-color: var(--tb-accent); }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) :is(input,select,textarea):focus { border-color: var(--app-focus); box-shadow: var(--app-focus-ring); }
-:is(.task-view-modal,.task-form-modal,.move-task-modal) :is(button,a,input,select,textarea,summary):focus-visible { outline: 3px solid var(--tb-accent); outline-offset: 2px; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-content { border: 1px solid var(--tb-line); border-radius: 14px; box-shadow: var(--app-shadow-raised); overflow: hidden; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-header { align-items: flex-start; padding: 20px 24px; border-color: var(--tb-line); }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-title { font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; line-height: 1.4; overflow-wrap: anywhere; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-header .btn-close { flex-shrink: 0; margin-left: auto; min-width: 20px; min-height: 20px; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-body { padding: 24px; overscroll-behavior-y: contain; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-footer { padding: 14px 24px; background: var(--app-column); border-color: var(--tb-line); gap: 8px; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .btn { border-radius: 7px; font-size: .82rem; min-height: 36px; }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .btn-primary { background: var(--tb-accent); border-color: var(--tb-accent); }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) :is(input,select,textarea):focus { border-color: var(--app-focus); box-shadow: var(--app-focus-ring); }
+:is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) :is(button,a,input,select,textarea,summary):focus-visible { outline: 3px solid var(--tb-accent); outline-offset: 2px; }
 :is(.task-view-modal,.task-form-modal) .task-dialog-eyebrow { color: var(--tb-muted); font-size: .68rem; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; margin: 0 0 5px; }
 .task-view-modal .modal-dialog { max-width: 1000px; }
 .task-view-modal .task-detail-layout { display: grid; grid-template-columns: minmax(0,1fr) 260px; gap: 28px; }
@@ -36,12 +36,12 @@
 .task-view-modal .attachment-item .attachment-icon { font-size: 1.3rem !important; }
 .task-view-modal .comment-item { border-color: var(--tb-line); padding: 14px; }.task-view-modal .comment-body { font-size: .85rem; line-height: 1.65; }
 @media (max-width: 767.98px) {
-  :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-dialog { margin: 8px; max-width: none; }
+  :is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-dialog { margin: 8px; max-width: none; }
   :is(.task-view-modal,.task-form-modal) .modal-dialog-scrollable { height: calc(100dvh - 16px); }
-  :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-header { padding: 16px; }
-  :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-body { padding: 16px; }
-  :is(.task-view-modal,.task-form-modal,.move-task-modal) .modal-footer { padding: 12px 16px; }
-  :is(.task-view-modal,.task-form-modal,.move-task-modal) .btn { min-height: 42px; }
+  :is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-header { padding: 16px; }
+  :is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-body { padding: 16px; }
+  :is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .modal-footer { padding: 12px 16px; }
+  :is(.task-view-modal,.task-form-modal,.move-task-modal,.add-stage-modal,.report-export-modal) .btn { min-height: 42px; }
   .task-view-modal .task-detail-layout { grid-template-columns: minmax(0,1fr); gap: 24px; }
   .task-view-modal .task-detail-sidebar { padding: 22px 0 0; border-left: 0; border-top: 1px solid var(--tb-line); }
   .task-view-modal .task-detail-sidebar .list-group-item .btn, .task-view-modal [data-task-checklist] [data-checklist-list] .btn { min-height: 40px; }

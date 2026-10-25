@@ -20,11 +20,11 @@ export async function checkProjectContext({evaluate,send,wait,saveScreenshot,err
  await check(`!document.querySelector('[data-content]').textContent.includes('Design the onboarding')`,'Foreign label cannot return another project tasks');
  for(const section of ['deadlines','activity','dashboard','task-list']) {
   await go(`/projects/${b}/${section}`);await ready(section);
-  await wait(section==='dashboard'?`document.querySelectorAll('.summary-card').length===4`:`document.querySelector('[data-results]')?.textContent.includes('Research interviews')`);
+  await wait(section==='dashboard'?`document.querySelectorAll('.summary-card').length===6`:`document.querySelector('[data-results]')?.textContent.includes('Research interviews')`);
   await check(`!document.querySelector('main').textContent.includes('Design the onboarding')`,'Project-scoped '+section);
  }
- await go(`/projects/${b}/dashboard`);await wait(`document.querySelectorAll('.summary-card').length===4`);
- await check(`document.querySelector('.summary-card[href="/projects/${b}/task-list"]').textContent.includes('1')`,'Project dashboard has exact scoped total');
+ await go(`/projects/${b}/dashboard`);await wait(`document.querySelectorAll('.summary-card').length===6`);
+ await check(`document.querySelector('.summary-card[href="/projects/${b}/tasks"]').textContent.includes('1')`,'Project dashboard has exact scoped total');
  await go(`/projects/${b}/task-list?status=done`);await wait(`document.querySelector('[data-status]')?.textContent.includes('No matching completed')`);
  await check(`document.querySelector('[data-clear]').hidden===false`,'Empty done filter remains visible and clearable');
  await go(`/projects/${b}/tasks`);await wait(`document.querySelectorAll('.task-card').length===1`);
@@ -44,7 +44,7 @@ export async function checkProjectContext({evaluate,send,wait,saveScreenshot,err
  await new Promise(r=>setTimeout(r,300));await check(`__boardMock.calls.length===${before}`,'Foreign project realtime event is ignored');
  await evaluate(`__boardMock.emptyLabels='${b}';__mockSocket.emit('message',new MessageEvent('message',{data:JSON.stringify([null,null,'realtime:project:${b}:board','broadcast',{event:'project_changed',payload:{project_id:'${b}'},type:'broadcast'}])}))`);
  await wait(`document.querySelector('[data-status]')?.textContent.includes('No labels')`);
- await go('/login');await wait(`location.pathname==='/projects/${b}/dashboard' && document.querySelectorAll('.summary-card').length===4`);
+ await go('/login');await wait(`location.pathname==='/projects/${b}/dashboard' && document.querySelectorAll('.summary-card').length===6`);
  await go(`/login?returnTo=${encodeURIComponent(`/projects/${a}/activity`)}`);await ready('activity');await evaluate(`localStorage.setItem('taskboard:last-project:'+__boardMock.user.id,'${b}')`);
  await send('Page.reload',{ignoreCache:true});await ready('activity');await check(`location.pathname.includes('${a}')`,'Explicit deep link wins over remembered project');
  await go(`/labels?project=${b}&label=00000000-0000-0000-0000-000000000032`);await wait(`location.pathname==='/projects/${b}/labels' && document.querySelector('[data-content]')?.textContent.includes('Research interviews')`);
@@ -56,7 +56,7 @@ export async function checkProjectContext({evaluate,send,wait,saveScreenshot,err
  await evaluate(`TaskboardTheme.set('light')`);await new Promise(r=>setTimeout(r,200));await saveScreenshot('context-mobile-light.png');
  await evaluate(`__boardMock.contextProjects=__boardMock.contextProjects.filter(p=>p.id!=='${b}');__mockSocket.emit('message',new MessageEvent('message',{data:JSON.stringify([null,null,'realtime:project:${b}:board','broadcast',{event:'access_changed',payload:{project_id:'${b}'},type:'broadcast'}])}))`);
  await wait(`document.querySelector('main')?.textContent.includes('no longer accessible')`);await check(`!document.querySelector('[data-deadlines]') && document.querySelector('[data-current-project]').hidden`,'Revoked access clears view and context');
- await go('/dashboard');await wait(`location.pathname==='/projects/${a}/dashboard' && document.querySelectorAll('.summary-card').length===4`);
+ await go('/dashboard');await wait(`location.pathname==='/projects/${a}/dashboard' && document.querySelectorAll('.summary-card').length===6`);
  await evaluate(`__boardMock.contextProjects=[]`);await go('/dashboard');await wait(`location.pathname==='/projects' && document.querySelector('[data-state="empty"]')?.hidden===false`);
  await check(`!document.querySelector('.summary-card')`,'No-project user gets useful project state');
  await check(`__boardMock.calls.filter(c=>['deadlines_page','task_activity_page','board_stage_counts'].includes(c.path)).every(c=>['${a}','${b}'].includes(c.body.p_project_id))`,'Every project RPC request carries explicit project scope');

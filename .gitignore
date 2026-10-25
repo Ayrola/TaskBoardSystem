@@ -4,3 +4,4 @@ dist/
 .env.*
 !.env.example
 !.env.seed.example
+supabase/.temp/

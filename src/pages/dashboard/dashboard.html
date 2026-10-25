@@ -1,27 +1,58 @@
 <section class="page-dashboard" aria-labelledby="dashboard-heading" aria-busy="true">
-  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-    <h1 id="dashboard-heading" class="h2 mb-0">Dashboard</h1>
-    <a class="btn btn-primary" href="/projects"><i class="bi bi-kanban" aria-hidden="true"></i> Go to projects</a>
+  <header class="dashboard-header">
+    <div><p class="dashboard-eyebrow">Project overview</p><h1 id="dashboard-heading">Dashboard</h1><p class="text-body-secondary mb-0" data-project-name></p></div>
+    <div class="dashboard-header-actions">
+      <nav class="dashboard-view-nav" aria-label="Project view"><a data-dashboard-link aria-current="page">Dashboard</a><a data-board-link>Board</a></nav>
+      <button class="btn btn-primary btn-sm" type="button" data-export-pdf><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Export PDF</button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" data-refresh><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh</button>
+    </div>
+  </header>
+  <div class="dashboard-controls">
+    <label>Period <select class="form-select form-select-sm" data-period><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></label>
+    <p data-period-note>Period affects task creation and recent activity only.</p>
+    <p class="dashboard-refreshed" role="status" aria-live="polite" data-refreshed>Waiting for data…</p>
   </div>
-
-  <div data-state="loading" class="d-flex align-items-center gap-2 text-body-secondary" role="status">
-    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-    <span>Loading your overview…</span>
-  </div>
-
-  <div data-state="error" class="alert alert-danger" role="alert" hidden>
-    <p class="mb-2" data-error-text>Could not load your dashboard.</p>
-    <button type="button" class="btn btn-outline-danger btn-sm" data-retry>Try again</button>
-  </div>
-
-  <div data-state="stats" class="row g-3 mb-0" data-summary-cards hidden></div>
-  <div data-empty class="card mt-4" hidden>
-    <div class="card-body text-center py-5">
-      <i class="bi bi-inbox display-5 text-body-secondary" aria-hidden="true"></i>
-      <h2 class="h5 mt-3">No tasks in this project yet</h2>
-      <p class="text-body-secondary mb-3">Open the board to add your first task.</p>
-      <a class="btn btn-primary" data-open-board href="/projects">Open board</a>
+  <div class="dashboard-error alert alert-danger" role="alert" data-error hidden><p class="mb-2" data-error-text></p><button type="button" class="btn btn-outline-danger btn-sm" data-retry>Retry</button></div>
+  <div data-loading role="status"><span class="visually-hidden">Loading project dashboard…</span><div class="dashboard-skeleton-cards" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="dashboard-skeleton-panels" aria-hidden="true"><span></span><span></span></div></div>
+  <div data-content hidden>
+    <div class="dashboard-summary" data-summary-cards></div>
+    <div class="dashboard-empty" data-empty hidden><div><h2>No tasks yet</h2><p>Your project overview will grow as you add work.</p></div><a class="btn btn-primary" data-add-task>Add Task</a></div>
+    <div class="dashboard-grid">
+      <section class="dashboard-widget dashboard-stages" aria-labelledby="dashboard-stage-title">
+        <div class="dashboard-widget-heading"><h2 id="dashboard-stage-title">Tasks by Stage</h2><span>Current totals</span></div>
+        <p class="dashboard-caption">Select a stage to view its tasks. Percentages are of all current project tasks.</p>
+        <div class="dashboard-chart" data-stage-chart-wrap><canvas data-chart="stages" role="img" aria-label="Task counts by stage. Exact values and links follow in the table."></canvas></div>
+        <div class="dashboard-table-scroll"><table class="dashboard-table"><caption class="visually-hidden">Current tasks per stage</caption><thead><tr><th scope="col">Stage</th><th scope="col">Tasks</th><th scope="col">Share</th></tr></thead><tbody data-stage-table></tbody></table></div>
+      </section>
+      <section class="dashboard-widget" aria-labelledby="dashboard-completion-title">
+        <div class="dashboard-widget-heading"><h2 id="dashboard-completion-title">Completion Overview</h2><span>Current totals</span></div>
+        <p class="dashboard-caption">Completion follows each task’s stage. No completion dates are inferred.</p>
+        <div class="dashboard-chart dashboard-doughnut"><canvas data-chart="completion" role="img" aria-label="Open versus completed tasks. Exact counts follow below."></canvas><div class="dashboard-doughnut-total" aria-hidden="true"><strong data-chart-total>0</strong><span>total tasks</span></div></div>
+        <div class="dashboard-completion-key" data-completion-key></div>
+        <p class="dashboard-caption" data-completion-note></p>
+      </section>
+      <section class="dashboard-widget dashboard-trend" aria-labelledby="dashboard-trend-title">
+        <div class="dashboard-widget-heading"><h2 id="dashboard-trend-title">Task Creation Trend</h2><span data-trend-period></span></div>
+        <p class="dashboard-caption" data-trend-definition></p>
+        <div class="dashboard-chart"><canvas data-chart="creation" role="img" aria-label="Tasks created per day in the selected period. Daily values are in the expandable table."></canvas></div>
+        <details><summary>Daily task creation data</summary><div class="dashboard-table-scroll dashboard-daily-table"><table class="dashboard-table"><caption class="visually-hidden">Tasks created each calendar day</caption><thead><tr><th scope="col">Date</th><th scope="col">Tasks created</th></tr></thead><tbody data-creation-table></tbody></table></div></details>
+      </section>
+      <section class="dashboard-widget" aria-labelledby="dashboard-workload-title">
+        <div class="dashboard-widget-heading"><h2 id="dashboard-workload-title">Workload by Assignee</h2><span>Open tasks</span></div>
+        <p class="dashboard-caption">Multi-assignee tasks appear for each assigned person, so summed counts can exceed unique open tasks.</p>
+        <ul class="dashboard-workload" data-workload></ul>
+      </section>
+      <section class="dashboard-widget" aria-labelledby="dashboard-deadlines-title">
+        <div class="dashboard-widget-heading"><h2 id="dashboard-deadlines-title">Deadlines</h2><a data-deadlines-link>View all</a></div>
+        <p class="dashboard-caption">Current open tasks only, earliest deadlines first. Up to five in each group.</p>
+        <h3 class="dashboard-overdue-title">Overdue</h3><ul class="dashboard-task-list" data-overdue></ul>
+        <h3>Upcoming</h3><ul class="dashboard-task-list" data-upcoming></ul>
+      </section>
+      <section class="dashboard-widget" aria-labelledby="dashboard-activity-title">
+        <div class="dashboard-widget-heading"><h2 id="dashboard-activity-title">Recent Activity</h2><a data-activity-link>View log</a></div>
+        <p class="dashboard-caption" data-activity-definition></p>
+        <ul class="dashboard-task-list dashboard-activity" data-activity></ul>
+      </section>
     </div>
   </div>
-
 </section>

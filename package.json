@@ -29,7 +29,13 @@
     "test:context:browser": "BOARD_CHECK_CONTEXT=1 node scripts/test-board-browser.mjs",
     "test:context": "node scripts/test-project-navigation.mjs && node --experimental-vm-modules scripts/test-project-context.mjs",
     "test:task-form": "node scripts/test-task-form.mjs",
-    "test:task-form:browser": "BOARD_CHECK_FORM=1 node scripts/test-board-browser.mjs"
+    "test:task-form:browser": "BOARD_CHECK_FORM=1 node scripts/test-board-browser.mjs",
+    "test:stages": "node scripts/test-project-stages.mjs",
+    "test:stages:browser": "BOARD_CHECK_STAGES=1 node scripts/test-board-browser.mjs",
+    "test:project-dashboard": "node scripts/test-project-dashboard.mjs",
+    "test:reports": "node scripts/test-report-metrics.mjs && node scripts/test-report-data.mjs",
+    "test:reports:browser": "BOARD_CHECK_PDF=1 node scripts/test-board-browser.mjs",
+    "reports:samples": "node scripts/generate-report-samples.mjs"
   },
   "keywords": [],
   "author": "",
@@ -41,7 +47,9 @@
     "@supabase/supabase-js": "^2.118.0",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.2",
+    "chart.js": "4.6.1",
     "dompurify": "3.4.17",
+    "pdfmake": "0.3.13",
     "quill": "2.0.3",
     "sortablejs": "1.15.7"
   },

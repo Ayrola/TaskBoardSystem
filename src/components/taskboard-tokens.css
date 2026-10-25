@@ -1,5 +1,5 @@
 /* Shared tokens are scoped to board, task and navigation surfaces. */
-.app-sidebar, .page-tasks, .task-view-modal, .task-form-modal, .move-task-modal {
+.app-sidebar, .page-tasks, .task-view-modal, .task-form-modal, .move-task-modal, .add-stage-modal, .report-export-modal {
   --tb-ink: var(--app-text); --tb-muted: var(--app-muted); --tb-line: var(--app-border); --tb-surface: var(--app-card);
   --tb-canvas: var(--app-column); --tb-accent: var(--app-accent); --tb-accent-soft: var(--app-selected);
   --tb-radius: 12px; --tb-space: 8px; --tb-shadow: var(--app-shadow);

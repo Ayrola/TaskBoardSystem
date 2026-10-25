@@ -83,3 +83,11 @@
 }
 @media (max-width: 420px) { .page-tasks .board-header { flex-wrap: wrap; }.page-tasks .board-header-actions { padding-top: 0; width: 100%; }.page-tasks .board-primary-add { flex: 1; justify-content: center; } }
 @media (prefers-reduced-motion: reduce) { .page-tasks :is(.task-card,.board-column) { transition: none; }.page-tasks .task-dragging { transform: none; } }
+
+.board-add-stage {
+  flex: 0 0 240px; align-self: flex-start; min-height: 48px;
+  border: 1px dashed var(--tb-line); border-radius: 12px;
+  background: var(--app-column); color: var(--tb-muted); font: inherit;
+}
+.board-add-stage:hover { color: var(--tb-accent); border-color: var(--tb-accent); }
+.board-add-stage:focus-visible { outline: 3px solid var(--tb-accent); outline-offset: 2px; }

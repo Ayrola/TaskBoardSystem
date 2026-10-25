@@ -2,7 +2,9 @@
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { checkReportBrowser } from './fixtures/report-browser-checks.mjs';
 import { checkBoardBrowser } from './fixtures/board-browser-checks.mjs';
+import { checkProjectStages } from './fixtures/project-stages-browser-checks.mjs';
 import { checkTaskForm } from './fixtures/task-form-browser-checks.mjs';
 import { checkProjectContext } from './fixtures/project-context-browser-checks.mjs';
 import { checkTaskCardsBrowser } from './fixtures/task-card-browser-checks.mjs';
@@ -59,7 +61,7 @@ try {
   if(process.env.BOARD_DARK && await evaluate(`document.documentElement.dataset.bsTheme!=='dark'`))throw Error('Expected dark theme.');
   if(await evaluate(`document.documentElement.scrollWidth>innerWidth`))throw Error('Desktop page overflow.');
   await saveScreenshot('desktop.png');
-  await (process.env.BOARD_CHECK_FORM ? checkTaskForm : process.env.BOARD_CHECK_CONTEXT ? checkProjectContext : process.env.BOARD_CHECK_CARDS ? checkTaskCardsBrowser : process.env.BOARD_CHECK_DASHBOARD ? checkDashboardBrowser : process.env.BOARD_CHECK_PROJECTS ? checkProjectsBrowser : process.env.BOARD_CHECK_THEME ? checkThemeBrowser : process.env.BOARD_CHECK_SIDEBAR ? checkSidebarBrowser : checkBoardBrowser)({evaluate,send,wait,saveScreenshot,errors,debugUrl,appUrl});
+  await (process.env.BOARD_CHECK_PDF ? checkReportBrowser : process.env.BOARD_CHECK_STAGES ? checkProjectStages : process.env.BOARD_CHECK_FORM ? checkTaskForm : process.env.BOARD_CHECK_CONTEXT ? checkProjectContext : process.env.BOARD_CHECK_CARDS ? checkTaskCardsBrowser : process.env.BOARD_CHECK_DASHBOARD ? checkDashboardBrowser : process.env.BOARD_CHECK_PROJECTS ? checkProjectsBrowser : process.env.BOARD_CHECK_THEME ? checkThemeBrowser : process.env.BOARD_CHECK_SIDEBAR ? checkSidebarBrowser : checkBoardBrowser)({evaluate,send,wait,saveScreenshot,errors,debugUrl,appUrl,downloadDir:outputDir});
   console.log(`Screenshots: ${outputDir}`);
 } catch(error) {
   await saveScreenshot('failure.png').catch(()=>{});

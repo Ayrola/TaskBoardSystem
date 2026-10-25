@@ -190,9 +190,11 @@ async function render({ focus }) {
 
   const cleanup = createCleanup();
   const refreshListeners = new Set();
+  const reselectListeners = new Set();
   const ctx = {
     project,
     pageTitle: page.title,
+    onReselect(listener) { reselectListeners.add(listener); cleanup.add(() => reselectListeners.delete(listener)); },
     onProjectRefresh(listener) { refreshListeners.add(listener); cleanup.add(() => refreshListeners.delete(listener)); },
     params,
     query,
@@ -206,7 +208,7 @@ async function render({ focus }) {
       leaveGuard = guard;
     },
   };
-  current = { cleanup, controller };
+  current = { cleanup, controller, reselectListeners };
 
   try {
     cleanup.add(await page.mount(outlet, ctx));
@@ -286,7 +288,18 @@ export function navigate(to, { replace = false } = {}) {
     return;
   }
   const target = url.pathname + url.search + url.hash;
-  if (target === location.pathname + location.search + location.hash) return;
+  if (target === location.pathname + location.search + location.hash) {
+    if (!resolve(url.pathname).route.refreshOnReselect) return;
+    if (leaveGuard && !leaveGuard()) return;
+    // Re-selecting Dashboard is an explicit refresh, including recovery from a failed mount.
+    // Keep the current page/period when mounted, and avoid adding duplicate history entries.
+    if (current?.reselectListeners.size) {
+      for (const refresh of current.reselectListeners) refresh();
+    } else {
+      render({ focus: true });
+    }
+    return;
+  }
   if (leaveGuard && !leaveGuard()) return;
   history[replace ? 'replaceState' : 'pushState']({}, '', target);
   render({ focus: true });

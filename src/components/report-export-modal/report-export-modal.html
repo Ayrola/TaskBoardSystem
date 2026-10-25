@@ -1,0 +1,19 @@
+<div class="modal fade report-export-modal" tabindex="-1" aria-labelledby="report-export-title">
+ <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+  <form class="modal-content" novalidate>
+   <div class="modal-header"><h2 class="modal-title h5" id="report-export-title">Export project statistics</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+   <div class="modal-body">
+    <p class="small text-body-secondary">Current metrics cover all retained project tasks at generation time. The period applies to task creation and recorded activity/throughput. Historical snapshots and cycle time are unavailable.</p>
+    <label for="report-period" class="form-label">Reporting period</label>
+    <select id="report-period" name="period" class="form-select mb-3"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="custom">Custom</option></select>
+    <div class="row g-2 mb-3" data-custom hidden><div class="col-6"><label for="report-start" class="form-label">From</label><input type="date" id="report-start" name="start" class="form-control"></div><div class="col-6"><label for="report-end" class="form-label">Through (inclusive)</label><input type="date" id="report-end" name="end" class="form-control"></div><p class="small text-body-secondary mb-0">Up to 366 calendar days, ending no later than today.</p></div>
+    <fieldset class="mb-3"><legend class="fs-6">Sections to include</legend><div class="row g-2" data-sections></div></fieldset>
+    <label for="report-paper" class="form-label">Paper size</label><select id="report-paper" name="paper" class="form-select"><option value="A4">A4</option><option value="LETTER">Letter</option></select>
+    <p class="small text-body-secondary mt-2 mb-0" data-timezone></p>
+    <div class="mt-3" data-progress-wrap hidden><progress class="w-100" max="100" value="0" aria-label="PDF generation progress" data-progress></progress><p class="small mb-0" role="status" aria-live="polite" data-progress-text></p></div>
+    <p class="text-danger small mt-3 mb-0" role="alert" data-error hidden></p>
+   </div>
+   <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-cancel>Cancel</button><button type="submit" class="btn btn-primary" data-download>Download PDF</button></div>
+  </form>
+ </div>
+</div>

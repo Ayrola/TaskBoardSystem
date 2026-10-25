@@ -5,6 +5,8 @@
   const token='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'+btoa(JSON.stringify({sub:user.id,role:'authenticated',exp:Math.floor(Date.now()/1000)+86400}))+'.preview';
   localStorage.setItem(`sb-${window.__boardPreview.ref}-auth-token`,JSON.stringify({access_token:token,refresh_token:'preview',expires_at:Math.floor(Date.now()/1000)+86400,expires_in:86400,token_type:'bearer',user}));
   const stages=[{id:id(11),name:'Backlog',position:0,is_done:false},{id:id(12),name:'In progress',position:1,is_done:false},{id:id(13),name:'Review',position:2,is_done:false},{id:id(14),name:'Complete',position:3,is_done:true}];
+  const storedStages=sessionStorage.getItem('taskboard-stages-fixture');
+  if(storedStages)stages.splice(0,stages.length,...JSON.parse(storedStages));
   const names=['Design the onboarding flow','Improve dashboard performance','Review project permissions','Polish responsive navigation','Write release notes','Audit keyboard interaction','Simplify account settings','Prepare the next milestone'];
   const tasks=Array.from({length:58},(_,i)=>({id:id(100+i),project_id:id(10),stage_id:id(11),title:i===57?'Needle task beyond the first page':names[i%names.length]+(i>7?` ${i+1}`:''),description:i===0?'<p>Map the first-run experience and make every step feel clear.</p>':i===1?'<p>Long description with &amp; safe content. '+ 'A clear, readable preview. '.repeat(30)+'</p>':i%3===0?'<p>Ship a focused improvement with clear acceptance criteria.</p>':'',position:i,done:false,due_at:i===0?'2020-01-01T12:00:00Z':null,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),task_labels:i%4===0?[{project_labels:{id:id(31),name:'Product',colour:'#dce9ff'}}]:[],task_attachments:[{count:i===0?2:0}],task_comments:[{count:i===0?3:0}]}));
   tasks.push(...[0,1,2].map((i)=>({...tasks[i],id:id(200+i),stage_id:i===2?id(14):id(12),position:i===2?0:i,done:i===2,title:['Build the shared design system','Accessibility review','Launch project workspace'][i]})));
@@ -37,7 +39,33 @@
       const offset=Number(url.searchParams.get('offset')??0),limit=Number(url.searchParams.get('limit')??20),total=list.length;
       return new Response(JSON.stringify(list.slice(offset,offset+limit).map(t=>({...t,projects:{title:'Product workspace'},project_stages:{name:stages.find(s=>s.id===t.stage_id).name}}))),{status:200,headers:{'content-type':'application/json','content-range':`${offset}-${Math.min(offset+limit,total)-1}/${total}`}});
     }
-    if(path==='is_admin')return respond(false);
+    if(path==='can_access_project')return respond(mock.denyReportAccess?false:true);
+    if(path==='project_statistics_report'){
+      if(mock.delayReport)await new Promise(r=>setTimeout(r,mock.delayReport));
+      if(mock.failReport)return respond({message:'Preview report failure'},500);
+      if(mock.denyReport)return respond({code:'P0002',message:'Project not found'},404);
+      const now=new Date(),today=new Intl.DateTimeFormat('en-CA',{timeZone:body.p_timezone}).format(now);
+      const start=body.p_start??new Date(Date.parse(today+'T12:00:00Z')-(body.p_days-1)*86400000).toISOString().slice(0,10);
+      const end=body.p_end??today;
+      return respond({project:{id:mock.mismatchReport?id(20):body.p_project_id,title:mock.reportTitle??'Проект София',description:'Статистика на проекта — Client-side PDF report.'},meta:{as_of:now.toISOString(),timezone:body.p_timezone,start_date:start,end_date:end,start_at:start+'T00:00:00Z',end_exclusive:now.toISOString(),due_soon_before:new Date(now.getTime()+168*3600000).toISOString()},stages,labels:[{id:id(31),name:'Product',colour:'#4488aa'}],people:[{user_id:id(1),name:'Ивелина'}],tasks:(mock.zeroReport?[]:tasks).map(t=>({...t,assignee_ids:[],label_ids:t.task_labels.map(l=>l.project_labels.id),completed_at:null})),events:[]});
+    }
+    if(path==='project_dashboard'){
+      if(mock.delayDashboard)await new Promise(r=>setTimeout(r,mock.delayDashboard));
+      if(mock.failDashboard)return respond({message:'Preview dashboard failure'},500);
+      if(mock.denied)return respond({code:'P0002',message:'Project not found'},404);
+      const all=body.p_project_id===id(20)?mock.otherTasks??[]:tasks;
+      const projectStages=body.p_project_id===id(20)?mock.otherStages??[]:stages;
+      const list=mock.zeroDashboard?[]:all;
+      const now=new Date(),open=list.filter(t=>!t.done);
+      const assignments=t=>mock.formAssignees?.[t.id]??[];
+      const people=new Map();for(const task of open)for(const person of assignments(task)){const row=people.get(person.user_id)??{user_id:person.user_id,label:person.label??'Unavailable person',count:0};row.count++;people.set(person.user_id,row);}
+      const day=value=>new Intl.DateTimeFormat('en-CA',{timeZone:body.p_timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(value);
+      const today=day(now),midnight=new Date(today+'T12:00:00Z');
+      const creation=Array.from({length:body.p_days},(_,i)=>{const d=new Date(midnight);d.setUTCDate(d.getUTCDate()-body.p_days+1+i);const key=d.toISOString().slice(0,10);return {day:key,count:list.filter(t=>day(new Date(t.created_at))===key&&Date.parse(t.created_at)<=now).length};});
+      const due=open.filter(t=>t.due_at).sort((a,b)=>a.due_at.localeCompare(b.due_at)||a.id.localeCompare(b.id));
+      return respond({as_of:now.toISOString(),timezone:body.p_timezone,days:body.p_days,totals:{total:list.length,open:open.length,completed:list.length-open.length,overdue:open.filter(t=>t.due_at&&new Date(t.due_at)<now).length,unassigned:open.filter(t=>!assignments(t).length).length},stages:projectStages.map(s=>({...s,count:list.filter(t=>t.stage_id===s.id).length})),creation,workload:[...people.values()].sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label)),deadlines:{overdue:due.filter(t=>new Date(t.due_at)<now).slice(0,5),upcoming:due.filter(t=>new Date(t.due_at)>=now).slice(0,5)},activity:mock.zeroDashboard?[]:mock.dashboardActivity??[{id:'1',task_id:list[0]?.id,task_title:list[0]?.title??'Deleted task',task_exists:!!list[0],event_type:'created',changes:{},created_at:now.toISOString()}]});
+    }
+    if(path==='is_admin')return respond(mock.admin??false);
     if(path==='browse_projects_page'){
       if(mock.failProjects)return respond({message:'Preview failure'},500);
       const all=mock.projectBrowserProjects??[{id:id(10),title:'Product workspace',description:'A focused workspace',stage_count:4,open_tasks:60,done_tasks:1,is_owner:!mock.member,is_member:mock.member,can_manage:!mock.member,created_at:'2026-10-01T12:00:00Z',updated_at:'2026-10-23T12:00:00Z'}];
@@ -52,6 +80,14 @@
     if(path==='projects' && init.method==='DELETE' && mock.projectBrowserProjects){const target=url.searchParams.get('id')?.slice(3);const removed=mock.projectBrowserProjects.filter(p=>p.id===target);mock.projectBrowserProjects=mock.projectBrowserProjects.filter(p=>p.id!==target);return respond(removed.map(p=>({id:p.id})));}
     if(path==='projects' && mock.projectBrowserProjects){const target=url.searchParams.get('id')?.slice(3);const p=mock.projectBrowserProjects.find(p=>p.id===target);return respond(p?{...p,owner_id:p.is_owner?user.id:id(99)}:null);}
     if(path==='projects')return respond(mock.denied?null:{id:id(10),title:'Product workspace',description:'A focused place to plan, build, and ship thoughtful product improvements. '+ 'Keep work visible, reduce friction, and bring the team along. '.repeat(4),owner_id:mock.member?id(99):user.id});
+    if(path==='create_project_stage'){
+      if(mock.delayStage)await new Promise(r=>setTimeout(r,mock.delayStage));
+      if(mock.failStage)return respond({message:'Preview failure'},500);
+      if(mock.duplicateStage)return respond({code:'23505',message:'Duplicate name'},409);
+      if(mock.member&&!mock.admin)return respond({code:'42501',message:'Denied'},403);
+      const stage={id:id(8000+stages.length),name:body.p_name.trim(),position:Math.max(-1,...stages.map(s=>s.position))+1,is_done:body.p_is_done};
+      stages.push(stage);sessionStorage.setItem('taskboard-stages-fixture',JSON.stringify(stages));return respond(stage.id);
+    }
     if(path==='project_stages')return respond(stages);
     if(path==='project_labels'&&mock.failLabelLoad)return respond({message:'Preview label load failure'},500);
     if(path==='project_labels')return respond([{id:id(31),project_id:id(10),name:'Product',colour:'#dce9ff'}]);

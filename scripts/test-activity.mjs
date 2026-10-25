@@ -18,7 +18,7 @@ create function can_manage_project(pid uuid) returns boolean language sql stable
 select auth.uid()='${id(9)}' or exists(select 1 from public.projects where id=pid and owner_id=auth.uid()) $$;`);
 for (const [file,names] of [
   ['20261022180734_project_members.sql',['lock_project_for_task_changes','tasks_sync_done','create_task','update_task','delete_task']],
-  ['20261022200000_pagination_large_boards.sql',['move_task','move_task_relative']],
+  ['20261022184825_pagination_large_boards.sql',['move_task','move_task_relative']],
   ['20261022182816_admin_console.sql',['delete_stage']],
 ]) for(const name of names) {
   const match=read(file).match(new RegExp(`create (?:or replace )?function public\\.${name}\\([\\s\\S]*?\\$\\$;`));assert.ok(match,name); await db.exec(match[0]);

@@ -18,7 +18,7 @@ grant usage on schema public,auth to authenticated;
 grant select on public.tasks to authenticated;
 grant execute on function auth.uid(), public.can_access_project(uuid) to authenticated;
 `);
-await db.exec(readFileSync(new URL('../supabase/migrations/20261022220000_task_assignees.sql', import.meta.url), 'utf8').replace(/^\uFEFF/, ''));
+await db.exec(readFileSync(new URL('../supabase/migrations/20261022185944_task_assignees.sql', import.meta.url), 'utf8').replace(/^\uFEFF/, ''));
 await db.exec(`insert into auth.users(id,email) values ${[1,2,3,4].map(n=>`('${id(n)}','user${n}@test.local')`).join(',')};
 insert into projects values ('${id(10)}','${id(1)}'),('${id(20)}','${id(3)}');
 insert into tasks values ('${id(11)}','${id(10)}'),('${id(21)}','${id(20)}');
